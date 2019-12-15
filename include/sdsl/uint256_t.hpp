@@ -425,20 +425,20 @@ inline bool operator!=(T number, const uint256_t& x) { return x.operator!=(numbe
 inline bool operator!=(const uint128_t& number, const uint256_t& x) { return x.operator!=(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-inline bool operator<(T number, const uint256_t& x) { return x.operator<(number); }
-inline bool operator<(const uint128_t& number, const uint256_t& x) { return x.operator<(number); }
+inline bool operator<(T number, const uint256_t& x) { return x.operator>(number); }
+inline bool operator<(const uint128_t& number, const uint256_t& x) { return x.operator>(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-inline bool operator<=(T number, const uint256_t& x) { return x.operator<=(number); }
-inline bool operator<=(const uint128_t& number, const uint256_t& x) { return x.operator<=(number); }
+inline bool operator<=(T number, const uint256_t& x) { return x.operator>=(number); }
+inline bool operator<=(const uint128_t& number, const uint256_t& x) { return x.operator>=(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-inline bool operator>(T number, const uint256_t& x) { return x.operator>(number); }
-inline bool operator>(const uint128_t& number, const uint256_t& x) { return x.operator>(number); }
+inline bool operator>(T number, const uint256_t& x) { return x.operator<(number); }
+inline bool operator>(const uint128_t& number, const uint256_t& x) { return x.operator<(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-inline bool operator>=(T number, const uint256_t& x) { return x.operator>=(number); }
-inline bool operator>=(const uint128_t& number, const uint256_t& x) { return x.operator>=(number); }
+inline bool operator>=(T number, const uint256_t& x) { return x.operator<=(number); }
+inline bool operator>=(const uint128_t& number, const uint256_t& x) { return x.operator<=(number); }
 
 std::ostream& operator<<(std::ostream& os, const uint256_t& x);
 

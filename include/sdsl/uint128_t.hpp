@@ -308,16 +308,16 @@ template <typename T, typename = typename std::enable_if<std::is_integral<T>::va
 inline bool operator!=(T number, const uint128_t& x) { return x.operator!=(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-inline bool operator<(T number, const uint128_t& x) { return x.operator<(number); }
+inline bool operator<(T number, const uint128_t& x) { return x.operator>(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-inline bool operator<=(T number, const uint128_t& x) { return x.operator<=(number); }
+inline bool operator<=(T number, const uint128_t& x) { return x.operator>=(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-inline bool operator>(T number, const uint128_t& x) { return x.operator>(number); }
+inline bool operator>(T number, const uint128_t& x) { return x.operator<(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-inline bool operator>=(T number, const uint128_t& x) { return x.operator>=(number); }
+inline bool operator>=(T number, const uint128_t& x) { return x.operator<=(number); }
 
 #endif
 
