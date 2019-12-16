@@ -365,6 +365,17 @@ class uint256_t
             }
         }
 
+        inline bool operator>=(const uint128_t& x) const
+        {
+            return m_high || m_lo >= x;
+        }
+
+        template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
+        inline bool operator>=(T x) const
+        {
+            return m_high || m_lo >= x;
+        }
+
         inline bool operator<=(const uint256_t& x) const
         {
             if (m_high != x.m_high) {
@@ -374,7 +385,19 @@ class uint256_t
             }
         }
 
-        inline bool operator>(const uint256_t& x) const {
+        inline bool operator<=(const uint128_t& x) const
+        {
+            return !m_high && m_lo <= x;
+        }
+
+        template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
+        inline bool operator<=(T x) const
+        {
+            return !m_high && m_lo <= x;
+        }
+
+        inline bool operator>(const uint256_t& x) const
+        {
             if (m_high != x.m_high) {
                 return m_high > x.m_high;
             } else {
@@ -382,16 +405,19 @@ class uint256_t
             }
         }
 
-        inline bool operator>(const uint128_t& x) const {
+        inline bool operator>(const uint128_t& x) const
+        {
             return m_high || m_lo > x;
         }
 
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-        inline bool operator>(T x) const {
+        inline bool operator>(T x) const
+        {
             return m_high || m_lo > x;
         }
 
-        inline bool operator<(const uint256_t& x) const {
+        inline bool operator<(const uint256_t& x) const
+        {
             if (m_high != x.m_high) {
                 return m_high < x.m_high;
             } else {
@@ -399,12 +425,14 @@ class uint256_t
             }
         }
 
-        inline bool operator<(const uint128_t& x) const {
+        inline bool operator<(const uint128_t& x) const
+        {
             return !m_high && m_lo < x;
         }
 
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-        inline bool operator<(T x) const {
+        inline bool operator<(T x) const
+        {
             return !m_high && m_lo < x;
         }
 

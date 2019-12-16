@@ -172,12 +172,12 @@ class wt_int
                uint32_t max_level=0) : wt_int(buf, size, buf.filename(), max_level) {}
 
         template<class t_data>
-        wt_int(t_data& data) : wt_int(data, data.size(),
-                                      ram_file_name(util::to_string(util::pid())
-                                                      +"_"+util::to_string(util::id()))) {}
+        wt_int(const t_data& data) : wt_int(data, data.size(),
+                                            ram_file_name(util::to_string(util::pid())
+                                                          +"_"+util::to_string(util::id()))) {}
 
         template<class t_data>
-        wt_int(t_data& data, size_type size, std::string buffer_filename,
+        wt_int(const t_data& data, size_type size, std::string buffer_filename,
                uint32_t max_level=0) : m_size(size) {
             if (0 == m_size)
                 return;

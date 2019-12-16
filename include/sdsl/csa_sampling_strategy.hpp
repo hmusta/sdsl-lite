@@ -56,6 +56,7 @@
 #include "csa_alphabet_strategy.hpp" // for key_trait
 #include "inv_perm_support.hpp"
 #include "wavelet_trees.hpp"
+#include "construct.hpp"
 #include <set>
 #include <tuple>
 
