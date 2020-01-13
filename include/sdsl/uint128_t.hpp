@@ -331,6 +331,12 @@ inline bool operator>(T number, const uint128_t& x) { return x.operator<(number)
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
 inline bool operator>=(T number, const uint128_t& x) { return x.operator<=(number); }
 
+namespace std {
+    template <> struct is_arithmetic <uint128_t> : std::true_type {};
+    template <> struct is_integral <uint128_t> : std::true_type {};
+    template <> struct is_unsigned <uint128_t> : std::true_type {};
+};
+
 #endif
 
 std::ostream& operator<<(std::ostream& os, const uint128_t& x);

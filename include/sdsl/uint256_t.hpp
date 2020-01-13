@@ -37,13 +37,10 @@ class uint256_t
         uint128_t m_high;
 
     public:
-        uint256_t() : m_lo(0), m_high(0) {}
-
-        inline uint256_t(const uint128_t& lo, const uint128_t& high = 0)
+        inline uint256_t(uint128_t lo = 0, uint128_t high = 0)
             : m_lo(lo), m_high(high) {}
 
-        template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
-        inline uint256_t(T lo, T mid = 0, uint128_t high = 0)
+        inline uint256_t(uint64_t lo, uint64_t mid, uint128_t high)
 #ifndef MODE_TI
             : m_lo(lo, mid), m_high(high) {}
 #else
@@ -124,13 +121,6 @@ class uint256_t
             return *this;
         }
 
-        inline uint256_t& operator+=(const uint128_t& x)
-        {
-            m_high += ((m_lo + x) < m_lo);
-            m_lo += x;
-            return *this;
-        }
-
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
         inline uint256_t& operator+=(T x)
         {
@@ -143,11 +133,6 @@ class uint256_t
         {
             return { m_lo + x.m_lo,
                 m_high + x.m_high + ((m_lo + x.m_lo) < m_lo) };
-        }
-
-        inline uint256_t operator+(const uint128_t& x) const
-        {
-            return { m_lo + x, m_high + ((m_lo + x) < m_lo) };
         }
 
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
@@ -163,13 +148,6 @@ class uint256_t
             return *this;
         }
 
-        inline uint256_t& operator-=(const uint128_t& x)
-        {
-            m_high -= (m_lo < x);
-            m_lo -= x;
-            return *this;
-        }
-
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
         inline uint256_t& operator-=(T x)
         {
@@ -182,11 +160,6 @@ class uint256_t
         {
             return { m_lo - x.m_lo,
                 m_high - x.m_high - (m_lo < x.m_lo) };
-        }
-
-        inline uint256_t operator-(const uint128_t& x) const
-        {
-            return { m_lo - x, m_high - (m_lo < x) };
         }
 
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
@@ -207,12 +180,6 @@ class uint256_t
             return *this;
         }
 
-        inline uint256_t& operator|=(const uint128_t& x)
-        {
-            m_lo |= x;
-            return *this;
-        }
-
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
         inline uint256_t& operator|=(T x)
         {
@@ -223,11 +190,6 @@ class uint256_t
         inline uint256_t operator|(const uint256_t& x) const
         {
             return { m_lo | x.m_lo, m_high | x.m_high };
-        }
-
-        inline uint256_t operator|(const uint128_t& x) const
-        {
-            return { m_lo | x, m_high };
         }
 
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
@@ -243,13 +205,6 @@ class uint256_t
             return *this;
         }
 
-        inline uint256_t& operator&=(const uint128_t& x)
-        {
-            m_lo &= x;
-            m_high = 0ULL;
-            return *this;
-        }
-
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
         inline uint256_t& operator&=(T x)
         {
@@ -261,11 +216,6 @@ class uint256_t
         inline uint256_t operator&(const uint256_t& x) const
         {
             return { m_lo & x.m_lo, m_high & x.m_high };
-        }
-
-        inline uint256_t operator&(const uint128_t& x) const
-        {
-            return { m_lo & x, uint128_t(0) };
         }
 
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
@@ -329,11 +279,6 @@ class uint256_t
             return (m_high == x.m_high) and (m_lo == x.m_lo);
         }
 
-        inline bool operator==(const uint128_t& x) const
-        {
-            return !m_high and (m_lo == x);
-        }
-
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
         inline bool operator==(T x) const
         {
@@ -343,11 +288,6 @@ class uint256_t
         inline bool operator!=(const uint256_t& x) const
         {
             return (m_high != x.m_high) or (m_lo != x.m_lo);
-        }
-
-        inline bool operator!=(const uint128_t& x) const
-        {
-            return m_high or (m_lo != x);
         }
 
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
@@ -365,11 +305,6 @@ class uint256_t
             }
         }
 
-        inline bool operator>=(const uint128_t& x) const
-        {
-            return m_high || m_lo >= x;
-        }
-
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
         inline bool operator>=(T x) const
         {
@@ -383,11 +318,6 @@ class uint256_t
             } else {
                 return m_lo <= x.m_lo;
             }
-        }
-
-        inline bool operator<=(const uint128_t& x) const
-        {
-            return !m_high && m_lo <= x;
         }
 
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
@@ -405,11 +335,6 @@ class uint256_t
             }
         }
 
-        inline bool operator>(const uint128_t& x) const
-        {
-            return m_high || m_lo > x;
-        }
-
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
         inline bool operator>(T x) const
         {
@@ -423,11 +348,6 @@ class uint256_t
             } else {
                 return m_lo < x.m_lo;
             }
-        }
-
-        inline bool operator<(const uint128_t& x) const
-        {
-            return !m_high && m_lo < x;
         }
 
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
@@ -446,27 +366,21 @@ class uint256_t
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
 inline bool operator==(T number, const uint256_t& x) { return x.operator==(number); }
-inline bool operator==(const uint128_t& number, const uint256_t& x) { return x.operator==(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
 inline bool operator!=(T number, const uint256_t& x) { return x.operator!=(number); }
-inline bool operator!=(const uint128_t& number, const uint256_t& x) { return x.operator!=(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
 inline bool operator<(T number, const uint256_t& x) { return x.operator>(number); }
-inline bool operator<(const uint128_t& number, const uint256_t& x) { return x.operator>(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
 inline bool operator<=(T number, const uint256_t& x) { return x.operator>=(number); }
-inline bool operator<=(const uint128_t& number, const uint256_t& x) { return x.operator>=(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
 inline bool operator>(T number, const uint256_t& x) { return x.operator<(number); }
-inline bool operator>(const uint128_t& number, const uint256_t& x) { return x.operator<(number); }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
 inline bool operator>=(T number, const uint256_t& x) { return x.operator<=(number); }
-inline bool operator>=(const uint128_t& number, const uint256_t& x) { return x.operator<=(number); }
 
 std::ostream& operator<<(std::ostream& os, const uint256_t& x);
 
