@@ -40,7 +40,13 @@ class uint128_t
         uint64_t m_high;
 
     public:
-        inline uint128_t(uint64_t lo = 0, uint64_t high = 0) : m_lo(lo), m_high(high) {}
+        inline uint128_t() : m_lo(0), m_high(0) {}
+        inline uint128_t(const uint128_t& x) : m_lo(x.m_lo), m_high(x.m_high) {}
+
+        template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
+        inline uint128_t(T lo) : m_lo(lo), m_high(0) {}
+
+        inline uint128_t(uint64_t lo, uint64_t high) : m_lo(lo), m_high(high) {}
 
         inline uint8_t popcount() const
         {
@@ -331,11 +337,17 @@ inline bool operator>(T number, const uint128_t& x) { return x.operator<(number)
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
 inline bool operator>=(T number, const uint128_t& x) { return x.operator<=(number); }
 
+} // end namespace
+
 namespace std {
-    template<> struct is_arithmetic<uint128_t> : std::true_type {};
-    template<> struct is_integral<uint128_t> : std::true_type {};
-    template<> struct is_unsigned<uint128_t> : std::true_type {};
-};
+    template<> struct is_arithmetic<sdsl::uint128_t> : ::std::true_type {};
+    template<> struct is_integral<sdsl::uint128_t> : ::std::true_type {};
+    template<> struct is_unsigned<sdsl::uint128_t> : ::std::true_type {};
+    template<> struct make_unsigned<sdsl::uint128_t> { typedef sdsl::uint128_t type; };
+} // end namespace
+
+namespace sdsl
+{
 
 #endif
 

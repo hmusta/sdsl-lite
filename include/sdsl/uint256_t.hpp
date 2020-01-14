@@ -37,8 +37,13 @@ class uint256_t
         uint128_t m_high;
 
     public:
-        inline uint256_t(uint128_t lo = 0, uint128_t high = 0)
-            : m_lo(lo), m_high(high) {}
+        inline uint256_t() : m_lo(0), m_high(0) {}
+        inline uint256_t(const uint256_t& x) : m_lo(x.m_lo), m_high(x.m_high) {}
+
+        template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
+        inline uint256_t(T lo) : m_lo(lo), m_high(0) {}
+
+        inline uint256_t(uint128_t lo, uint128_t high) : m_lo(lo), m_high(high) {}
 
         inline uint256_t(uint64_t lo, uint64_t mid, uint128_t high)
 #ifndef MODE_TI
@@ -386,6 +391,13 @@ inline bool operator>=(T number, const uint256_t& x) { return x.operator<=(numbe
 
 std::ostream& operator<<(std::ostream& os, const uint256_t& x);
 
+} // end namespace
+
+namespace std {
+    template<> struct is_arithmetic<sdsl::uint256_t> : ::std::true_type {};
+    template<> struct is_integral<sdsl::uint256_t> : ::std::true_type {};
+    template<> struct is_unsigned<sdsl::uint256_t> : ::std::true_type {};
+    template<> struct make_unsigned<sdsl::uint256_t> { typedef sdsl::uint256_t type; };
 } // end namespace
 
 #endif
