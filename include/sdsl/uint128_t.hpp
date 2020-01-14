@@ -178,7 +178,7 @@ class uint128_t
         inline uint128_t& operator<<=(T x)
         {
             if (x >= 64) {
-                m_high = x >= 128 ? 0ULL : m_lo << (x - 64);
+                m_high = m_lo << (x - 64);
                 m_lo = 0;
             } else {
                 // FYI: avoids UB (shifting by the word size)
@@ -192,7 +192,7 @@ class uint128_t
         inline uint128_t operator<<(T x) const
         {
             if (x >= 64) {
-                return { 0ULL, x >= 128 ? 0ULL : m_lo << (x - 64) };
+                return { 0ULL, m_lo << (x - 64) };
             } else {
                 // FYI: avoids UB (shifting by the word size)
                 return { m_lo << x, (m_high << x) | ((m_lo >> (63 - x)) >> 1) };
@@ -203,7 +203,7 @@ class uint128_t
         inline uint128_t& operator>>=(T x)
         {
             if (x >= 64) {
-                m_lo = x >= 128 ? 0ULL : m_high >> (x - 64);
+                m_lo = m_high >> (x - 64);
                 m_high = 0;
             } else {
                 // FYI: avoids UB (shifting by the word size)
@@ -217,7 +217,7 @@ class uint128_t
         inline uint128_t operator>>(T x) const
         {
             if (x >= 64) {
-                return { x >= 128 ? 0ULL : m_high >> (x - 64), 0ULL };
+                return { m_high >> (x - 64), 0ULL };
             } else {
                 // FYI: avoids UB (shifting by the word size)
                 return { (m_lo >> x) | ((m_high << (63 - x)) << 1), m_high >> x };

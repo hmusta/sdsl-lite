@@ -31,7 +31,7 @@ namespace sdsl
 class uint256_t
 {
     public:
-        friend std::ostream& operator << (std::ostream&, const uint256_t&);
+        friend std::ostream& operator<<(std::ostream&, const uint256_t&);
     private:
         uint128_t m_lo;
         uint128_t m_high;
@@ -52,8 +52,10 @@ class uint256_t
 #ifndef MODE_TI
             return m_lo.popcount() + m_high.popcount();
 #else
-            return bits::cnt(m_lo) + bits::cnt(m_lo >> 64)
-                    + bits::cnt(m_high) + bits::cnt(m_high >> 64);
+            return bits::cnt(static_cast<uint64_t>(m_lo))
+                    + bits::cnt(static_cast<uint64_t>(m_lo >> 64))
+                    + bits::cnt(static_cast<uint64_t>(m_high))
+                    + bits::cnt(static_cast<uint64_t>(m_high >> 64));
 #endif
         }
 
@@ -228,12 +230,11 @@ class uint256_t
         inline uint256_t& operator<<=(T x)
         {
             if (x >= 128) {
-                m_lo <<= (x - 128);
-                m_high = m_lo;
+                m_high = m_lo << (x - 128);
                 m_lo = 0;
             } else {
-                m_high <<= x;
-                m_high |= (m_lo >> (128 - x));
+                // FYI: avoids UB (shifting by the word size)
+                m_high = (m_high << x) | ((m_lo >> (127 - x)) >> 1);
                 m_lo <<= x;
             }
             return *this;
@@ -245,7 +246,8 @@ class uint256_t
             if (x >= 128) {
                 return { uint128_t(0), m_lo << (x - 128),  };
             } else {
-                return { m_lo << x, (m_high << x) | (m_lo >> (128 - x)) };
+                // FYI: avoids UB (shifting by the word size)
+                return { m_lo << x, (m_high << x) | ((m_lo >> (127 - x)) >> 1) };
             }
         }
 
@@ -253,12 +255,11 @@ class uint256_t
         inline uint256_t& operator>>=(T x)
         {
             if (x >= 128) {
-                m_high >>= (x - 128);
-                m_lo = m_high;
+                m_lo = m_high >> (x - 128);
                 m_high = 0;
             } else {
-                m_lo >>= x;
-                m_lo |= (m_high << (128 - x));
+                // FYI: avoids UB (shifting by the word size)
+                m_lo = (m_lo >> x) | ((m_high << (127 - x)) << 1);
                 m_high >>= x;
             }
             return *this;
@@ -270,7 +271,8 @@ class uint256_t
             if (x >= 128) {
                 return { m_high >> (x - 128), uint128_t(0) };
             } else {
-                return { (m_lo >> x) | (m_high << (128 - x)), m_high >> x };
+                // FYI: avoids UB (shifting by the word size)
+                return { (m_lo >> x) | ((m_high << (127 - x)) << 1), m_high >> x };
             }
         }
 
