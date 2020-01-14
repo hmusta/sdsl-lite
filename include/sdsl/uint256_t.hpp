@@ -356,7 +356,7 @@ class uint256_t
             return !m_high && m_lo < x;
         }
 
-        inline operator bool() const { return static_cast<bool>(m_lo) || static_cast<bool>(m_high); }
+        inline operator bool() const { return m_lo || m_high; }
         inline operator uint8_t() const { return static_cast<uint8_t>(m_lo); }
         inline operator uint16_t() const { return static_cast<uint16_t>(m_lo); }
         inline operator uint32_t() const { return static_cast<uint32_t>(m_lo); }

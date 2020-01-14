@@ -306,10 +306,10 @@ class uint128_t
             return !m_high && m_lo < x;
         }
 
-        inline operator bool() const { return static_cast<bool>(m_lo | m_high); }
+        inline operator bool() const { return m_lo || m_high; }
         inline operator uint8_t() const { return static_cast<uint8_t>(m_lo); }
-        inline operator uint16_t() const { return static_cast<uint8_t>(m_lo); }
-        inline operator uint32_t() const { return static_cast<uint8_t>(m_lo); }
+        inline operator uint16_t() const { return static_cast<uint16_t>(m_lo); }
+        inline operator uint32_t() const { return static_cast<uint32_t>(m_lo); }
         inline operator uint64_t() const { return m_lo; }
 };
 
@@ -332,9 +332,9 @@ template <typename T, typename = typename std::enable_if<std::is_integral<T>::va
 inline bool operator>=(T number, const uint128_t& x) { return x.operator<=(number); }
 
 namespace std {
-    template <> struct is_arithmetic <uint128_t> : std::true_type {};
-    template <> struct is_integral <uint128_t> : std::true_type {};
-    template <> struct is_unsigned <uint128_t> : std::true_type {};
+    template<> struct is_arithmetic<uint128_t> : std::true_type {};
+    template<> struct is_integral<uint128_t> : std::true_type {};
+    template<> struct is_unsigned<uint128_t> : std::true_type {};
 };
 
 #endif
