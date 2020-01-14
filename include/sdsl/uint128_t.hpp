@@ -34,7 +34,7 @@ typedef unsigned int uint128_t __attribute__((mode(TI)));
 class uint128_t
 {
     public:
-        friend std::ostream& operator << (std::ostream&, const uint128_t&);
+        friend std::ostream& operator<<(std::ostream&, const uint128_t&);
     private:
         uint64_t m_lo;
         uint64_t m_high;
