@@ -272,22 +272,22 @@ void select_support_mcl<t_b,t_pat_len>::init_fast(const bit_vector* v)
 
     m_superblock = int_vector<0>(sb, 0, m_logn);// TODO: hier koennte man logn noch optimieren...s
 
-    bit_vector::size_type arg_position[SUPER_BLOCK_SIZE];
+    bit_vector::size_type arg_position[SUPER_BLOCK_SIZE/64];
     const uint64_t* data = v->data();
     uint64_t carry_new=0;
     size_type last_k64 = 1, sb_cnt=0;
     for (size_type i=0, cnt_old=0, cnt_new=0, last_k64_sum=1; i < v->capacity(); i+=64, ++data) {
         cnt_new += select_support_trait<t_b, t_pat_len>::args_in_the_word(*data, carry_new);
         if (cnt_new >= last_k64_sum) {
-            arg_position[last_k64-1] = i + select_support_trait<t_b, t_pat_len>::ith_arg_pos_in_the_word(*data, last_k64_sum  - cnt_old, carry_new);
+            arg_position[(last_k64-1)/64] = i + select_support_trait<t_b, t_pat_len>::ith_arg_pos_in_the_word(*data, last_k64_sum  - cnt_old, carry_new);
             last_k64 += 64;
             last_k64_sum += 64;
 
             if (last_k64 == SUPER_BLOCK_SIZE+1) {
                 m_superblock[sb_cnt] = arg_position[0];
-                size_type pos_of_last_arg_in_the_block = arg_position[last_k64-65];
+                size_type pos_of_last_arg_in_the_block = arg_position[(last_k64-65)/64];
 
-                for (size_type ii=arg_position[last_k64-65]+1, j=last_k64-65+1; ii < v->size() and j < SUPER_BLOCK_SIZE; ++ii)
+                for (size_type ii=arg_position[(last_k64-65)/64]+1, j=last_k64-65+1; ii < v->size() and j < SUPER_BLOCK_SIZE; ++ii)
                     if (select_support_trait<t_b,t_pat_len>::found_arg(ii, *v)) {
                         pos_of_last_arg_in_the_block = ii;
                         ++j;
@@ -304,9 +304,9 @@ void select_support_mcl<t_b,t_pat_len>::init_fast(const bit_vector* v)
                         }
                     }
                 } else {
-                    m_block[sb_cnt] = int_vector<0>(64, 0, bits::hi(arg_position[last_k64-65] - arg_position[0]) + 1);
+                    m_block[sb_cnt] = int_vector<0>(64, 0, bits::hi(arg_position[(last_k64-65)/64] - arg_position[0]) + 1);
                     for (size_type j=0; j < SUPER_BLOCK_SIZE; j+=64) {
-                        m_block[sb_cnt][j/64] = arg_position[j]-arg_position[0];
+                        m_block[sb_cnt][j/64] = arg_position[j/64]-arg_position[0];
                     }
                 }
                 ++sb_cnt;
