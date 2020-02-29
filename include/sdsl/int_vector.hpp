@@ -601,24 +601,6 @@ class int_vector
             }
             return written_bytes;
         }
-
-
-        struct raw_wrapper {
-            const int_vector& vec;
-            raw_wrapper() = delete;
-            raw_wrapper(const int_vector& _vec) : vec(_vec) {}
-
-            size_type
-            serialize(std::ostream& out, structure_tree_node* v=nullptr, std::string name="")const
-            {
-                structure_tree_node* child = structure_tree::add_child(v, name, util::class_name(*this));
-                auto written_bytes = vec.write_data(out);
-                structure_tree::add_size(child, written_bytes);
-                return written_bytes;
-            }
-        };
-
-        const raw_wrapper raw = raw_wrapper(*this);
 };
 
 //! A proxy class that acts as a reference to an integer of length \p len bits in a int_vector.
