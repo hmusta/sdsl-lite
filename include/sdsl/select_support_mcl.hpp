@@ -310,7 +310,7 @@ void select_support_mcl<t_b,t_pat_len>::init_fast(const bit_vector* v)
                         }
                     }
                 } else {
-                    m_miniblock[sb_cnt] = int_vector<0>(64, 0, bits::hi(pos_diff)+1);
+                    m_miniblock[sb_cnt] = int_vector<0>(64, 0, bits::hi(arg_position[last_k64-65] - arg_position[0]) + 1);
                     for (size_type j=0; j < SUPER_BLOCK_SIZE; j+=64) {
                         m_miniblock[sb_cnt][j/64] = arg_position[j]-arg_position[0];
                     }
