@@ -270,7 +270,45 @@ class rrr_vector
             }
             uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
+            assert(rrr_helper_type::decode_bit(bt, btnr, i % t_bs) == inverse_select(i).first);
             return rrr_helper_type::decode_bit(bt, btnr, i % t_bs);
+        }
+
+        //! Accessing the i-th element of the original bit_vector and rank at
+        //  that position, the umber of 1-bits in the prefix [0..i-1].
+        /*! \param i An index i with \f$ 0 \leq i < size()  \f$.
+           \return The i-th bit of the original bit_vector and the umber of
+                   1-bits in the prefix [0..i-1] of the original bit_vector.
+        */
+        const std::pair<bool, size_type> inverse_select(size_type i)const
+        {
+            assert(i<size());
+            size_type bt_idx = i/t_bs;
+            size_type sample_pos = bt_idx/t_k;
+            size_type rank = m_rank[ sample_pos ];
+#ifndef RRR_NO_OPT
+            if (sample_pos+1 < m_rank.size()) {
+                size_type diff_rank  = m_rank[ sample_pos+1 ] - rank;
+                if (diff_rank == (size_type)0) {
+                    return  std::make_pair(false, rank);
+                } else if (diff_rank == (size_type)t_bs*t_k) {
+                    return  std::make_pair(true, rank + (i - sample_pos*t_k*t_bs));
+                }
+            }
+#endif
+            const bool inv = m_invert[ sample_pos ];
+            size_type btnrp = m_btnrp[ sample_pos ];
+            for (size_type j = sample_pos*t_k; j < bt_idx; ++j) {
+                uint16_t r = m_bt[j];
+                rank  += (inv ? t_bs - r: r);
+                btnrp += rrr_helper_type::space_for_bt(r);
+            }
+            uint16_t bt = inv ? t_bs - m_bt[ bt_idx ] : m_bt[ bt_idx ];
+            uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
+            number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
+            uint16_t off = i % t_bs;
+            return std::make_pair(rrr_helper_type::decode_bit(bt, btnr, off),
+                                  rank + rrr_helper_type::decode_popcount(bt, btnr, off));
         }
 
         //! Get the integer value of the binary string of length len starting at position idx.
@@ -474,6 +512,7 @@ class rank_support_rrr
             uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_v->m_btnr, btnrp, btnrlen);
             uint16_t popcnt  = rrr_helper_type::decode_popcount(bt, btnr, off);
+            assert(i >= size() || rank + popcnt == m_v->inverse_select(i).second);
             return rank_support_rrr_trait<t_b>::adjust_rank(rank + popcnt, i);
         }
 
