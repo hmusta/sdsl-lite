@@ -264,14 +264,13 @@ class rrr_vector
                 return bt>0;
             }
 #endif
-            uint16_t off = i % t_bs; //i - bt_idx*t_bs;
             size_type btnrp = m_btnrp[ sample_pos ];
             for (size_type j = sample_pos*t_k; j < bt_idx; ++j) {
                 btnrp += rrr_helper_type::space_for_bt(m_bt[j]);
             }
             uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
-            return rrr_helper_type::decode_bit(bt, btnr, off);
+            return rrr_helper_type::decode_bit(bt, btnr, i % t_bs);
         }
 
         //! Get the integer value of the binary string of length len starting at position idx.
@@ -446,20 +445,20 @@ class rank_support_rrr
             assert(i <= m_v->size());
             size_type bt_idx = i/t_bs;
             size_type sample_pos = bt_idx/t_k;
-            size_type btnrp = m_v->m_btnrp[ sample_pos ];
             size_type rank  = m_v->m_rank[ sample_pos ];
+#ifndef RRR_NO_OPT
             if (sample_pos+1 < m_v->m_rank.size()) {
                 size_type diff_rank  = m_v->m_rank[ sample_pos+1 ] - rank;
-#ifndef RRR_NO_OPT
                 if (diff_rank == (size_type)0) {
                     return  rank_support_rrr_trait<t_b>::adjust_rank(rank, i);
                 } else if (diff_rank == (size_type)t_bs*t_k) {
                     return  rank_support_rrr_trait<t_b>::adjust_rank(
                                 rank + i - sample_pos*t_k*t_bs, i);
                 }
-#endif
             }
+#endif
             const bool inv = m_v->m_invert[ sample_pos ];
+            size_type btnrp = m_v->m_btnrp[ sample_pos ];
             for (size_type j = sample_pos*t_k; j < bt_idx; ++j) {
                 uint16_t r = m_v->m_bt[j];
                 rank  += (inv ? t_bs - r: r);
@@ -568,8 +567,8 @@ class select_support_rrr
             //   (2) linear search between the samples
             rank = m_v->m_rank[begin]; // now i>rank
             idx = begin * t_k; // initialize idx for select result
-            size_type diff_rank  = m_v->m_rank[end] - rank;
 #ifndef RRR_NO_OPT
+            size_type diff_rank  = m_v->m_rank[end] - rank;
             if (diff_rank == (size_type)t_bs*t_k) {// optimisation for select<1>
                 return idx*t_bs + i-rank -1;
             }
