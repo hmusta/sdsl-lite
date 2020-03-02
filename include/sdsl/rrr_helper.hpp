@@ -453,6 +453,62 @@ struct rrr_helper {
         return result + ((n-static_cast<uint64_t>(nr)-1) < off);
     }
 
+
+    //! Decode the first off bits bits of the block encoded by the pair (k, nr) and return the set bits.
+    static inline std::pair<bool, uint16_t>
+    decode_bit_and_popcount(uint16_t k, number_type nr, uint16_t off) {
+#ifndef RRR_NO_OPT
+        assert(k != 0 && k != n); // this must have already been checked in the caller
+        if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
+            uint16_t pos = (n-static_cast<uint64_t>(nr)-1);
+            return std::make_pair(pos == off, (uint16_t)pos < off);
+        }
+#endif
+        uint16_t result = 0;
+        uint16_t nn = n;
+        // if k < n \log n, it is better to do a binary search for each of the on bits
+        if (k+1 < binomial::data.BINARY_SEARCH_THRESHOLD+1) {
+            while (k > 1) {
+                uint16_t nn_lb = k, nn_rb = nn+1; // invariant nr >= binomial::data.table[nn_lb-1][k]
+                while (nn_lb < nn_rb) {
+                    uint16_t nn_mid = (nn_lb + nn_rb) / 2;
+                    if (nr >= binomial::data.table[nn_mid-1][k]) {
+                        nn_lb = nn_mid+1;
+                    } else {
+                        nn_rb = nn_mid;
+                    }
+                }
+                nn = nn_lb-1;
+                if (n-nn >= off) {
+                    return std::make_pair((n-nn) == off, result);
+                }
+                ++result;
+                nr -= binomial::data.table[nn-1][k];
+                --k;
+                --nn;
+            }
+        } else { // else do a linear decoding
+            int i = 0;
+            while (k > 1) {
+                if (i > off) {
+                    return std::make_pair(false, result);
+                }
+                if (nr >= binomial::data.table[nn-1][k]) {
+                    if (i == off)
+                        return std::make_pair(true, result);
+                    nr -= binomial::data.table[nn-1][k];
+                    --k;
+                    ++result;
+                }
+                --nn;
+                ++i;
+            }
+        }
+        return std::make_pair((n-static_cast<uint64_t>(nr)-1) == off,
+                              result + ((n-static_cast<uint64_t>(nr)-1) < off));
+    }
+
+
     /*! \pre k >= sel, sel>0
      */
     static inline uint16_t decode_select(uint16_t k, number_type& nr, uint16_t sel) {
