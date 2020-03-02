@@ -304,9 +304,16 @@ class rrr_vector
                 btnrp += rrr_helper_type::space_for_bt(r);
             }
             uint16_t bt = inv ? t_bs - m_bt[ bt_idx ] : m_bt[ bt_idx ];
+            uint16_t off = i % t_bs;
+#ifndef RRR_NO_OPT
+            if (bt == 0) {
+                return  std::make_pair(false, rank);
+            } else if (bt == t_bs) { // very effective optimization
+                return  std::make_pair(true, rank + off);
+            }
+#endif
             uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
-            uint16_t off = i % t_bs;
             return std::make_pair(rrr_helper_type::decode_bit(bt, btnr, off),
                                   rank + rrr_helper_type::decode_popcount(bt, btnr, off));
         }
@@ -332,7 +339,7 @@ class rrr_vector
                     bt = t_bs - bt;
                 if (bt == 0) {   // all bits are zero
                     res = 0;
-                } else if (bt == t_bs and t_bs <= 64) { // all bits are zero
+                } else if (bt == t_bs) { // all bits are ones
                     res = bits::lo_set[len];
                 } else {
                     size_type btnrp = m_btnrp[ sample_pos ];
@@ -508,7 +515,13 @@ class rank_support_rrr
                 return rank_support_rrr_trait<t_b>::adjust_rank(rank, i);
             }
             uint16_t bt = inv ? t_bs - m_v->m_bt[ bt_idx ] : m_v->m_bt[ bt_idx ];
-
+#ifndef RRR_NO_OPT
+            if (bt == 0) {
+                return  rank_support_rrr_trait<t_b>::adjust_rank(rank, i);
+            } else if (bt == t_bs) { // very effective optimization
+                return  rank_support_rrr_trait<t_b>::adjust_rank(rank + off, i);
+            }
+#endif
             uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_v->m_btnr, btnrp, btnrlen);
             uint16_t popcnt  = rrr_helper_type::decode_popcount(bt, btnr, off);

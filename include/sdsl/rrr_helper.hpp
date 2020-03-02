@@ -325,11 +325,8 @@ struct rrr_helper {
     //! Decode the bit at position \f$ off \f$ of the block encoded by the pair (k, nr).
     static inline bool decode_bit(uint16_t k, number_type nr, uint16_t off) {
 #ifndef RRR_NO_OPT
-        if (k == n) {  // if n==k, then the encoded block consists only of ones
-            return 1;
-        } else if (k == 0) { // if k==0 then the encoded block consists only of zeros
-            return 0;
-        } else if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
+        assert(k != 0 && k != n); // this must have already been checked in the caller
+        if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
             return (n-static_cast<uint64_t>(nr)-1) == off; // position n-nr-1
         }
 #endif
@@ -376,11 +373,8 @@ struct rrr_helper {
     //! Decode the len-bit integer starting at position \f$ off \f$ of the block encoded by the pair (k, nr).
     static inline uint64_t decode_int(uint16_t k, number_type nr, uint16_t off, uint16_t len) {
 #ifndef RRR_NO_OPT
-        if (k == n) {  // if n==k, then the encoded block consists only of ones
-            return bits::lo_set[len];
-        } else if (k == 0) { // if k==0 then the encoded block consists only of zeros
-            return 0;
-        } else if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
+        assert(k != 0 && k != n); // this must have already been checked in the caller
+        if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
             if (n-static_cast<uint64_t>(nr)-1 >= off and n-static_cast<uint64_t>(nr)-1 <= (uint64_t)(off+len-1)) {
                 return 1ULL << ((n-static_cast<uint64_t>(nr)-1)-off);
             } else
@@ -413,11 +407,8 @@ struct rrr_helper {
     //! Decode the first off bits bits of the block encoded by the pair (k, nr) and return the set bits.
     static inline uint16_t decode_popcount(uint16_t k, number_type nr, uint16_t off) {
 #ifndef RRR_NO_OPT
-        if (k == n) {  // if n==k, then the encoded block consists only of ones
-            return off;   // i.e. the answer is off
-        } else if (k == 0) { // if k==0, then the encoded block consists only on zeros
-            return 0;    // i.e. the result is zero
-        } else if (k == 1) { // if k==1 then the encoded block contains exactly on set bit at
+        assert(k != 0 && k != n); // this must have already been checked in the caller
+        if (k == 1) { // if k==1 then the encoded block contains exactly on set bit at
             return (n-static_cast<uint64_t>(nr)-1) < off; // position n-nr-1, and popcount is 1 if off > (n-nr-1).
         }
 #endif
