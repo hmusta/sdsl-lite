@@ -330,7 +330,7 @@ class rrr_vector
                     bt = t_bs - bt;
                 if (bt == 0) {   // all bits are zero
                     res = 0;
-                } else if (bt == t_bs and t_bs <= 64) { // all bits are zero
+                } else if (bt == t_bs) { // all bits are ones
                     res = bits::lo_set[len];
                 } else {
                     size_type btnrp = m_btnrp[ sample_pos ];
