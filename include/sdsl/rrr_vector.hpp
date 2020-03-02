@@ -305,8 +305,8 @@ class rrr_vector
             uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
             uint16_t off = i % t_bs;
-            return std::make_pair(rrr_helper_type::decode_bit(bt, btnr, off),
-                                  rank + rrr_helper_type::decode_popcount(bt, btnr, off));
+            std::pair<bool, uint16_t> pair = rrr_helper_type::decode_bit_and_popcount(bt, btnr, off);
+            return std::make_pair(pair.first, rank + pair.second);
         }
 
         //! Get the integer value of the binary string of length len starting at position idx.
