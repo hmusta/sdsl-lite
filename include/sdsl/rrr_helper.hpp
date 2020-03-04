@@ -22,12 +22,6 @@
 #ifndef SDSL_RRR_HELPER
 #define SDSL_RRR_HELPER
 
-#ifdef RRR_NO_OPT
-#ifndef RRR_NO_BS
-#define RRR_NO_BS
-#endif
-#endif
-
 #include "bits.hpp"
 #include "uint128_t.hpp"
 #include "uint256_t.hpp"
@@ -178,6 +172,7 @@ struct binomial_table {
     static struct impl {
         number_type table[n+1][n+1];
         number_type table_tr[n+1][n]; // table[][] transposed, without the last column, for faster column acceess.
+        uint16_t ubound_n[n+1][n]; // map (t, k) to the largest n for which \binom{n-1}{k} <= 2^(t+1)-1.
 
         impl() {
             for (uint16_t k=0; k <= n; ++k) {
@@ -197,6 +192,19 @@ struct binomial_table {
             for (int nn=0; nn<n; ++nn) {
                 for (int k=0; k<=n; ++k) {
                     table_tr[k][nn] = table[nn][k];
+                }
+            }
+            number_type bound = 0;
+            for (int t=0; t<n; ++t) {
+                bound = (bound << 1) | 1; // bound = 2^(t+1)-1
+                for (int k=0; k<=n; ++k) {
+                    for (int nn=1; nn<=n; ++nn) {
+                        if (table[nn-1][k] <= bound) { // \binom{nn-1}{k} <= 2^(t+1)-1.
+                            ubound_n[k][t] = nn;
+                        } else {
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -222,7 +230,6 @@ typename binomial_table<n,number_type>::impl binomial_table<n,number_type>::data
  * Size of data.space is  \f$ (n+1) \times \lceil n/8 \rceil \f$ bytes. E.g. 64*8=512 bytes for n=63,
  * 2kB for n=127, and 8kB for n=255.
  *
- * BINARY_SEARCH_THRESHOLD is equal to \f$ n/\lceil\log{n+1}\rceil \f$
  * \pre The template parameter n should be in the range [7..256].
  */
 template<uint16_t n>
@@ -235,12 +242,9 @@ struct binomial_coefficients {
 
     static struct impl {
         const number_type(&table_tr)[MAX_SIZE+1][MAX_SIZE] = tBinom::data.table_tr;  // table for the binomial coefficients
+        const uint16_t(&ubound_n)[MAX_SIZE+1][MAX_SIZE] = tBinom::data.ubound_n;  // table for the binomial coefficients
         uint16_t space[n+1];    // for entry i,j \lceil \log( {i \choose j}+1 ) \rceil
-#ifndef RRR_NO_BS
-        static const uint16_t BINARY_SEARCH_THRESHOLD = n/MAX_LOG;
-#else
-        static const uint16_t BINARY_SEARCH_THRESHOLD = 0;
-#endif
+        static const uint16_t LINEAR_SEARCH_THRESHOLD = n/8;
         // L1Mask contains a word with the n least significant bits set to 1.
         number_type L1Mask = (~(number_type)0) >> (sizeof(number_type) * 8 - n);
 
@@ -264,7 +268,6 @@ typename binomial_coefficients<n>::impl binomial_coefficients<n>::data;
  * Implemented optimizations in the decoding process:
  *   - Constant time handling for uniform blocks (only zeros or ones in the block)
  *   - Constant time handling for blocks contains only a single one bit.
- *   - Decode blocks with at most \f$ k<n\log(n) \f$ by a binary search for the ones.
  *   - For operations decode_popcount, decode_select, and decode_bit a block
  *     is only decoded as long as the query is not answered yet.
  */
@@ -323,29 +326,24 @@ struct rrr_helper {
             return (n-static_cast<uint16_t>(nr)-1) == off; // position n-nr-1
         }
 #endif
-        uint16_t nn = n;
-        // if k < n \log n, it is better to do a binary search for each of the on bits
-        if (k+1 < binomial::data.BINARY_SEARCH_THRESHOLD+1) {
+        uint16_t nn = std::min(n, binomial::data.ubound_n[k][trait::hi(nr)]);
+        assert(nn <= n);
+        if (k < binomial::data.LINEAR_SEARCH_THRESHOLD) {
             while (k > 1) {
-                uint16_t nn_lb = k, nn_rb = nn+1; // invariant nr >= binomial::data.table[nn_lb-1][k]
-                while (nn_lb < nn_rb) {
-                    uint16_t nn_mid = (nn_lb + nn_rb) / 2;
-                    if (nr >= binomial::data.table_tr[k][nn_mid-1]) {
-                        nn_lb = nn_mid+1;
-                    } else {
-                        nn_rb = nn_mid;
-                    }
+                if (n-nn > off) {
+                    return 0;
                 }
-                nn = nn_lb-1;
-                if (n-nn >= off) {
-                    return (n-nn) == off;
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    nr -= binomial::data.table_tr[k][nn-1];
+                    --k;
+                    if (n-nn == off)
+                        return 1;
+                    nn = std::min((int)nn, binomial::data.ubound_n[k][trait::hi(nr)] + 1);
                 }
-                nr -= binomial::data.table_tr[k][nn-1];
-                --k;
                 --nn;
             }
         } else { // else do a linear decoding
-            int i = 0;
+            int i = n-nn;
             while (k > 1) {
                 if (i > off) {
                     return 0;
@@ -376,20 +374,37 @@ struct rrr_helper {
         }
 #endif
         uint64_t res = 0;
-        uint16_t nn = n;
-        int i = 0;
-        while (k > 1) {
-            if (i > off+len-1) {
-                return res;
+        uint16_t nn = std::min(n, binomial::data.ubound_n[k][trait::hi(nr)]);
+        assert(nn <= n);
+        if (k < binomial::data.LINEAR_SEARCH_THRESHOLD) {
+            while (k > 1) {
+                if (n-nn > off+len-1) {
+                    return res;
+                }
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    nr -= binomial::data.table_tr[k][nn-1];
+                    --k;
+                    if (n-nn >= off)
+                        res |= 1ULL << (n-nn-off);
+                    nn = std::min((int)nn, binomial::data.ubound_n[k][trait::hi(nr)] + 1);
+                }
+                --nn;
             }
-            if (nr >= binomial::data.table_tr[k][nn-1]) {
-                nr -= binomial::data.table_tr[k][nn-1];
-                --k;
-                if (i >= off)
-                    res |= 1ULL << (i-off);
+        } else { // else do a linear decoding
+            int i = n-nn;
+            while (k > 1) {
+                if (i > off+len-1) {
+                    return res;
+                }
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    nr -= binomial::data.table_tr[k][nn-1];
+                    --k;
+                    if (i >= off)
+                        res |= 1ULL << (i-off);
+                }
+                --nn;
+                ++i;
             }
-            --nn;
-            ++i;
         }
         uint16_t pos = (n-static_cast<uint16_t>(nr)-1);
         if (pos >= off and pos <= (off+len-1)) {
@@ -408,30 +423,23 @@ struct rrr_helper {
         }
 #endif
         uint16_t result = 0;
-        uint16_t nn = n;
-        // if k < n \log n, it is better to do a binary search for each of the on bits
-        if (k+1 < binomial::data.BINARY_SEARCH_THRESHOLD+1) {
+        uint16_t nn = std::min(n, binomial::data.ubound_n[k][trait::hi(nr)]);
+        assert(nn <= n);
+        if (k < binomial::data.LINEAR_SEARCH_THRESHOLD) {
             while (k > 1) {
-                uint16_t nn_lb = k, nn_rb = nn+1; // invariant nr >= binomial::data.table[nn_lb-1][k]
-                while (nn_lb < nn_rb) {
-                    uint16_t nn_mid = (nn_lb + nn_rb) / 2;
-                    if (nr >= binomial::data.table_tr[k][nn_mid-1]) {
-                        nn_lb = nn_mid+1;
-                    } else {
-                        nn_rb = nn_mid;
-                    }
-                }
-                nn = nn_lb-1;
                 if (n-nn >= off) {
                     return result;
                 }
-                ++result;
-                nr -= binomial::data.table_tr[k][nn-1];
-                --k;
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    nr -= binomial::data.table_tr[k][nn-1];
+                    --k;
+                    ++result;
+                    nn = std::min((int)nn, binomial::data.ubound_n[k][trait::hi(nr)] + 1);
+                }
                 --nn;
             }
         } else {
-            int i = 0;
+            int i = n-nn;
             while (k > 1) {
                 if (i >= off) {
                     return result;
@@ -460,30 +468,25 @@ struct rrr_helper {
         }
 #endif
         uint16_t result = 0;
-        uint16_t nn = n;
-        // if k < n \log n, it is better to do a binary search for each of the on bits
-        if (k+1 < binomial::data.BINARY_SEARCH_THRESHOLD+1) {
+        uint16_t nn = std::min(n, binomial::data.ubound_n[k][trait::hi(nr)]);
+        assert(nn <= n);
+        if (k < binomial::data.LINEAR_SEARCH_THRESHOLD) {
             while (k > 1) {
-                uint16_t nn_lb = k, nn_rb = nn+1; // invariant nr >= binomial::data.table[nn_lb-1][k]
-                while (nn_lb < nn_rb) {
-                    uint16_t nn_mid = (nn_lb + nn_rb) / 2;
-                    if (nr >= binomial::data.table_tr[k][nn_mid-1]) {
-                        nn_lb = nn_mid+1;
-                    } else {
-                        nn_rb = nn_mid;
-                    }
+                if (n-nn > off) {
+                    return std::make_pair(false, result);
                 }
-                nn = nn_lb-1;
-                if (n-nn >= off) {
-                    return std::make_pair((n-nn) == off, result);
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    if (n-nn == off)
+                        return std::make_pair(true, result);
+                    nr -= binomial::data.table_tr[k][nn-1];
+                    --k;
+                    ++result;
+                    nn = std::min((int)nn, binomial::data.ubound_n[k][trait::hi(nr)] + 1);
                 }
-                ++result;
-                nr -= binomial::data.table_tr[k][nn-1];
-                --k;
                 --nn;
             }
         } else { // else do a linear decoding
-            int i = 0;
+            int i = n-nn;
             while (k > 1) {
                 if (i > off) {
                     return std::make_pair(false, result);
@@ -514,39 +517,30 @@ struct rrr_helper {
             return n-static_cast<uint16_t>(nr)-1;
         }
 #endif
-        uint16_t nn = n;
-        // if k < n \log n, it is better to do a binary search for each of the on bits
-        if (sel+1 < binomial::data.BINARY_SEARCH_THRESHOLD+1) {
-            while (sel > 0) {
-                uint16_t nn_lb = k, nn_rb = nn+1; // invariant nr >= iii.m_coefficients[nn_lb-1]
-                while (nn_lb < nn_rb) {
-                    uint16_t nn_mid = (nn_lb + nn_rb) / 2;
-                    if (nr >= binomial::data.table_tr[k][nn_mid-1]) {
-                        nn_lb = nn_mid+1;
-                    } else {
-                        nn_rb = nn_mid;
-                    }
+        uint16_t nn = std::min(n, binomial::data.ubound_n[k][trait::hi(nr)]);
+        assert(nn <= n);
+        if (k < binomial::data.LINEAR_SEARCH_THRESHOLD) {
+            while (sel > 0) {   // TODO: this condition only works if the precondition holds
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    nr -= binomial::data.table_tr[k][nn-1];
+                    --sel;
+                    --k;
+                    if (sel)
+                        nn = std::min((int)nn, binomial::data.ubound_n[k][trait::hi(nr)] + 1);
                 }
-                nn = nn_lb-1;
-                nr -= binomial::data.table_tr[k][nn-1];
-                --sel;
                 --nn;
-                --k;
             }
-            return n-nn-1;
         } else {
-            int i = 0;
-            while (sel > 0) {   // TODO: this condition only work if the precondition holds
+            while (sel > 0) {   // TODO: this condition only works if the precondition holds
                 if (nr >= binomial::data.table_tr[k][nn-1]) {
                     nr -= binomial::data.table_tr[k][nn-1];
                     --sel;
                     --k;
                 }
                 --nn;
-                ++i;
             }
-            return i-1;
         }
+        return n-nn-1;
     }
 
     /*! \pre k >= sel, sel>0
@@ -559,17 +553,40 @@ struct rrr_helper {
             return sel-1 + (n-static_cast<uint16_t>(nr)-1 < sel);
         }
 #endif
-        uint16_t nn = n;
-        while (sel > 0) {   // TODO: this condition only work if the precondition holds
-            if (nr >= binomial::data.table_tr[k][nn-1]) {
-                nr -= binomial::data.table_tr[k][nn-1];
-                // a one is decoded
-                --k;
-            } else {
-                // a zero is decoded
-                --sel;
+        uint16_t nn = std::min(n, binomial::data.ubound_n[k][trait::hi(nr)]);
+        assert(nn <= n);
+        if (sel <= n - nn)
+            return sel-1;
+        sel -= n - nn;
+        if (k < binomial::data.LINEAR_SEARCH_THRESHOLD) {
+            while (sel > 0) {   // TODO: this condition only work if the precondition holds
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    nr -= binomial::data.table_tr[k][nn-1];
+                    // a one is decoded
+                    --k;
+                    uint16_t next_nn = std::min((int)nn, binomial::data.ubound_n[k][trait::hi(nr)] + 1);
+                    if (sel <= nn - next_nn)
+                        return n-nn+sel;
+                    sel -= nn - next_nn;
+                    nn = next_nn;
+                } else {
+                    // a zero is decoded
+                    --sel;
+                }
+                --nn;
             }
-            --nn;
+        } else {
+            while (sel > 0) {   // TODO: this condition only work if the precondition holds
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    nr -= binomial::data.table_tr[k][nn-1];
+                    // a one is decoded
+                    --k;
+                } else {
+                    // a zero is decoded
+                    --sel;
+                }
+                --nn;
+            }
         }
         return n-nn-1; // return the starting position of $sel$th occurence of the pattern
     }
