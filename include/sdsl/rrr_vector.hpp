@@ -102,9 +102,6 @@ class rrr_vector
         bit_vector   m_btnr;   // Compressed block type numbers.
         int_vector<> m_btnrp;  // Sample pointers into m_btnr.
         int_vector<> m_rank;   // Sample rank values.
-        bit_vector   m_invert; // Specifies if a superblock (i.e. t_k blocks)
-        // have to be considered as inverted i.e. 1 and
-        // 0 are swapped
 
         void copy(const rrr_vector& rrr)
         {
@@ -113,7 +110,6 @@ class rrr_vector
             m_btnr = rrr.m_btnr;
             m_btnrp = rrr.m_btnrp;
             m_rank = rrr.m_rank;
-            m_invert = rrr.m_invert;
         }
 
     public:
@@ -133,7 +129,7 @@ class rrr_vector
         rrr_vector(rrr_vector&& rrr) : m_size(std::move(rrr.m_size)),
             m_bt(std::move(rrr.m_bt)),
             m_btnr(std::move(rrr.m_btnr)), m_btnrp(std::move(rrr.m_btnrp)),
-            m_rank(std::move(rrr.m_rank)), m_invert(std::move(rrr.m_invert)) {}
+            m_rank(std::move(rrr.m_rank)) {}
 
         //! Constructor
         /*!
@@ -169,47 +165,25 @@ class rrr_vector
             m_rank  = int_vector<>((bt_array.size()+t_k-1)/t_k + ((m_size % (t_k*t_bs))>0), 0, bits::hi(sum_rank)+1);
             //                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             //   only add a finishing block, if the last block of the superblock is not a dummy block
-            m_invert = bit_vector((bt_array.size()+t_k-1)/t_k, 0);
 
             // (2) calculate block type numbers and pointers into btnr and rank samples
             pos = 0; i = 0;
             btnr_pos= 0, sum_rank = 0;
-            bool invert = false;
             while (pos + t_bs <= m_size) {  // handle all full blocks
                 if ((i % t_k) == (size_type)0) {
-                    m_btnrp[ i/t_k ] = btnr_pos;
                     m_rank[ i/t_k ] = sum_rank;
-                    // calculate invert bit for that superblock
-                    if (i+t_k <= bt_array.size()) {
-                        size_type gt_half_t_bs = 0; // counter for blocks greater than half of the blocksize
-                        for (size_type j=i; j < i+t_k; ++j) {
-                            if (bt_array[j] > t_bs/2)
-                                ++gt_half_t_bs;
-                        }
-                        if (gt_half_t_bs > (t_k/2)) {
-                            m_invert[ i/t_k ] = 1;
-                            for (size_type j=i; j < i+t_k; ++j) {
-                                bt_array[j] = t_bs - bt_array[j];
-                            }
-                            invert = true;
-                        } else {
-                            invert = false;
-                        }
-                    } else {
-                        invert = false;
-                    }
+                    m_btnrp[ i/t_k ] = btnr_pos;
                 }
                 uint16_t space_for_bt = rrr_helper_type::space_for_bt(x=bt_array[i++]);
-                uint16_t k = invert ? (t_bs - x) : x;
-                sum_rank += k;
+                sum_rank += x;
                 if (space_for_bt) {
                     number_type bin = rrr_helper_type::decode_btnr(bv, pos, t_bs);
                     // invert blocks with more than n/2 1-bits
-                    if (k > t_bs/2) {
-                        k = t_bs - k;
+                    if (x > t_bs/2) {
+                        x = t_bs - x;
                         bin = (~bin) & rrr_helper_type::binomial::data.L1Mask;
                     }
-                    number_type nr = rrr_helper_type::bin_to_nr(bin, k);
+                    number_type nr = rrr_helper_type::bin_to_nr(bin, x);
                     rrr_helper_type::set_bt(m_btnr, btnr_pos, nr, space_for_bt);
                 }
                 btnr_pos += space_for_bt;
@@ -217,24 +191,21 @@ class rrr_vector
             }
             if (pos < m_size) { // handle last not full block
                 if ((i % t_k) == (size_type)0) {
-                    m_btnrp[ i/t_k ] = btnr_pos;
                     m_rank[ i/t_k ] = sum_rank;
-                    m_invert[ i/t_k ] = 0; // default: set last block to not inverted
-                    invert = false;
+                    m_btnrp[ i/t_k ] = btnr_pos;
                 }
                 uint16_t space_for_bt = rrr_helper_type::space_for_bt(x=bt_array[i++]);
 //          no extra dummy block added to bt_array, therefore this condition should hold
                 assert(i == bt_array.size());
-                uint16_t k = invert ? (t_bs - x) : x;
-                sum_rank += k;
+                sum_rank += x;
                 if (space_for_bt) {
                     number_type bin = rrr_helper_type::decode_btnr(bv, pos, m_size-pos);
                     // invert blocks with more than n/2 1-bits
-                    if (k > t_bs/2) {
-                        k = t_bs - k;
+                    if (x > t_bs/2) {
+                        x = t_bs - x;
                         bin = (~bin) & rrr_helper_type::binomial::data.L1Mask;
                     }
-                    number_type nr = rrr_helper_type::bin_to_nr(bin, k);
+                    number_type nr = rrr_helper_type::bin_to_nr(bin, x);
                     rrr_helper_type::set_bt(m_btnr, btnr_pos, nr, space_for_bt);
                 }
                 btnr_pos += space_for_bt;
@@ -254,7 +225,6 @@ class rrr_vector
                 m_btnr.swap(rrr.m_btnr);
                 m_btnrp.swap(rrr.m_btnrp);
                 m_rank.swap(rrr.m_rank);
-                m_invert.swap(rrr.m_invert);
             }
         }
 
@@ -266,14 +236,12 @@ class rrr_vector
         {
             size_type bt_idx = i/t_bs;
             uint16_t bt = m_bt[bt_idx];
-            size_type sample_pos = bt_idx/t_k;
-            if (m_invert[sample_pos])
-                bt = t_bs - bt;
 #ifndef RRR_NO_OPT
             if (bt == 0 or bt == t_bs) { // very effective optimization
                 return bt>0;
             }
 #endif
+            size_type sample_pos = bt_idx/t_k;
             size_type btnrp = m_btnrp[ sample_pos ];
             for (size_type j = sample_pos*t_k; j < bt_idx; ++j) {
                 btnrp += rrr_helper_type::space_for_bt(m_bt[j]);
@@ -309,14 +277,15 @@ class rrr_vector
                 }
             }
 #endif
-            const bool inv = m_invert[ sample_pos ];
             size_type btnrp = m_btnrp[ sample_pos ];
-            for (size_type j = sample_pos*t_k; j < bt_idx; ++j) {
-                uint16_t r = m_bt[j];
-                rank  += (inv ? t_bs - r: r);
-                btnrp += rrr_helper_type::space_for_bt(r);
+            uint16_t bt = 0, btnrlen = 0; // temp variables for block_type and space for block type
+            for (size_type j = sample_pos*t_k; j <= bt_idx; ++j) {
+                bt = m_bt[j];
+                rank  += bt;
+                btnrp += (btnrlen=rrr_helper_type::space_for_bt(bt));
             }
-            uint16_t bt = inv ? t_bs - m_bt[ bt_idx ] : m_bt[ bt_idx ];
+            rank -= bt;
+            btnrp -= btnrlen;
             uint16_t off = i % t_bs;
 #ifndef RRR_NO_OPT
             if (bt == 0) {
@@ -325,7 +294,6 @@ class rrr_vector
                 return  std::make_pair(true, rank + off);
             }
 #endif
-            uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
             // blocks with more than n/2 1-bits are inverted
             std::pair<bool, uint16_t> pair = rrr_helper_type::decode_bit_and_popcount((bt <= t_bs/2) ? bt : t_bs - bt, btnr, off);
@@ -350,8 +318,6 @@ class rrr_vector
             size_type sample_pos = bb_idx/t_k;
             size_type eb_idx = (idx+len-1)/t_bs; // end block index
             if (bb_idx == eb_idx) {  // extract only in one block
-                if (m_invert[sample_pos])
-                    bt = t_bs - bt;
                 if (bt == 0) {   // all bits are zero
                     res = 0;
                 } else if (bt == t_bs) { // all bits are ones
@@ -415,7 +381,6 @@ class rrr_vector
             written_bytes += m_btnr.serialize(out, child, "btnr");
             written_bytes += m_btnrp.serialize(out, child, "btnrp");
             written_bytes += m_rank.serialize(out, child, "rank_samples");
-            written_bytes += m_invert.serialize(out, child, "invert");
             structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }
@@ -428,7 +393,6 @@ class rrr_vector
             m_btnr.load(in);
             m_btnrp.load(in);
             m_rank.load(in);
-            m_invert.load(in);
         }
 
         iterator begin() const
@@ -519,19 +483,20 @@ class rank_support_rrr
                 }
             }
 #endif
-            const bool inv = m_v->m_invert[ sample_pos ];
             size_type btnrp = m_v->m_btnrp[ sample_pos ];
-            for (size_type j = sample_pos*t_k; j < bt_idx; ++j) {
-                uint16_t r = m_v->m_bt[j];
-                rank  += (inv ? t_bs - r: r);
-                btnrp += rrr_helper_type::space_for_bt(r);
+            uint16_t bt = 0, btnrlen = 0; // temp variables for block_type and space for block type
+            for (size_type j = sample_pos*t_k; j <= bt_idx; ++j) {
+                bt = m_v->m_bt[j];
+                rank  += bt;
+                btnrp += (btnrlen=rrr_helper_type::space_for_bt(bt));
             }
+            rank -= bt;
+            btnrp -= btnrlen;
             uint16_t off = i % t_bs;
             if (!off) {   // needed for special case: if i=size() is a multiple of t_bs
                 // the access to m_bt would cause a invalid memory access
                 return rank_support_rrr_trait<t_b>::adjust_rank(rank, i);
             }
-            uint16_t bt = inv ? t_bs - m_v->m_bt[ bt_idx ] : m_v->m_bt[ bt_idx ];
 #ifndef RRR_NO_OPT
             if (bt == 0) {
                 return  rank_support_rrr_trait<t_b>::adjust_rank(rank, i);
@@ -539,7 +504,6 @@ class rank_support_rrr
                 return  rank_support_rrr_trait<t_b>::adjust_rank(rank + off, i);
             }
 #endif
-            uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_v->m_btnr, btnrp, btnrlen);
             // blocks with more than n/2 1-bits are inverted
             uint16_t popcnt = (bt <= t_bs/2) ? rrr_helper_type::decode_popcount(bt, btnr, off)
@@ -644,11 +608,10 @@ class select_support_rrr
                 return idx*t_bs + i-rank -1;
             }
 #endif
-            const bool inv = m_v->m_invert[ begin ];
             size_type btnrp = m_v->m_btnrp[ begin ];
             uint16_t bt = 0, btnrlen = 0; // temp variables for block_type and space for block type
             while (i > rank) {
-                bt = m_v->m_bt[idx++]; bt = inv ? t_bs-bt : bt;
+                bt = m_v->m_bt[idx++];
                 rank += bt;
                 btnrp += (btnrlen=rrr_helper_type::space_for_bt(bt));
             }
@@ -685,11 +648,10 @@ class select_support_rrr
             if (m_v->m_rank[end] == m_v->m_rank[begin]) {      // only for select<0>
                 return idx*t_bs +  i-rank -1;
             }
-            const bool inv = m_v->m_invert[ begin ];
             size_type btnrp = m_v->m_btnrp[ begin ];
             uint16_t bt = 0, btnrlen = 0; // temp variables for block_type and space for block type
             while (i > rank) {
-                bt = m_v->m_bt[idx++]; bt = inv ? t_bs-bt : bt;
+                bt = m_v->m_bt[idx++];
                 rank += (t_bs-bt);
                 btnrp += (btnrlen=rrr_helper_type::space_for_bt(bt));
             }
