@@ -177,6 +177,7 @@ template<uint16_t n, class number_type>
 struct binomial_table {
     static struct impl {
         number_type table[n+1][n+1];
+        number_type table_tr[n+1][n]; // table[][] transposed, without the last column, for faster column acceess.
         number_type L1Mask[n+1]; // L1Mask[i] contains a word with the i least significant bits set to 1.
         // i.e. L1Mask[0] = 0, L1Mask[1] = 1,...
         number_type O1Mask[n]; // O1Mask[i] contains a word with the i least significant bits set to 0.
@@ -194,6 +195,11 @@ struct binomial_table {
             for (int nn=1; nn<=n; ++nn) {
                 for (int k=1; k<=n; ++k) {
                     table[nn][k] = table[nn-1][k-1] + table[nn-1][k];
+                }
+            }
+            for (int nn=0; nn<n; ++nn) {
+                for (int k=0; k<=n; ++k) {
+                    table_tr[k][nn] = table[nn][k];
                 }
             }
             L1Mask[0] = 0;
@@ -241,7 +247,7 @@ struct binomial_coefficients {
     typedef binomial_table<MAX_SIZE,number_type> tBinom;
 
     static struct impl {
-        const number_type(&table)[MAX_SIZE+1][MAX_SIZE+1] = tBinom::data.table;  // table for the binomial coefficients
+        const number_type(&table_tr)[MAX_SIZE+1][MAX_SIZE] = tBinom::data.table_tr;  // table for the binomial coefficients
         uint16_t space[n+1];    // for entry i,j \lceil \log( {i \choose j}+1 ) \rceil
 #ifndef RRR_NO_BS
         static const uint16_t BINARY_SEARCH_THRESHOLD = n/MAX_LOG;
@@ -313,7 +319,7 @@ struct rrr_helper {
         uint16_t  nn = n; // size of the block
         while (bin) {
             if (bin & 1ULL) {
-                nr += binomial::data.table[nn-1][k];
+                nr += binomial::data.table_tr[k][nn-1];
                 --k; // go to the case (n-1, k-1)
             }// else go to the case (n-1, k)
             bin >>= 1;
@@ -337,7 +343,7 @@ struct rrr_helper {
                 uint16_t nn_lb = k, nn_rb = nn+1; // invariant nr >= binomial::data.table[nn_lb-1][k]
                 while (nn_lb < nn_rb) {
                     uint16_t nn_mid = (nn_lb + nn_rb) / 2;
-                    if (nr >= binomial::data.table[nn_mid-1][k]) {
+                    if (nr >= binomial::data.table_tr[k][nn_mid-1]) {
                         nn_lb = nn_mid+1;
                     } else {
                         nn_rb = nn_mid;
@@ -347,7 +353,7 @@ struct rrr_helper {
                 if (n-nn >= off) {
                     return (n-nn) == off;
                 }
-                nr -= binomial::data.table[nn-1][k];
+                nr -= binomial::data.table_tr[k][nn-1];
                 --k;
                 --nn;
             }
@@ -357,8 +363,8 @@ struct rrr_helper {
                 if (i > off) {
                     return 0;
                 }
-                if (nr >= binomial::data.table[nn-1][k]) {
-                    nr -= binomial::data.table[nn-1][k];
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    nr -= binomial::data.table_tr[k][nn-1];
                     --k;
                     if (i == off)
                         return 1;
@@ -388,8 +394,8 @@ struct rrr_helper {
             if (i > off+len-1) {
                 return res;
             }
-            if (nr >= binomial::data.table[nn-1][k]) {
-                nr -= binomial::data.table[nn-1][k];
+            if (nr >= binomial::data.table_tr[k][nn-1]) {
+                nr -= binomial::data.table_tr[k][nn-1];
                 --k;
                 if (i >= off)
                     res |= 1ULL << (i-off);
@@ -420,7 +426,7 @@ struct rrr_helper {
                 uint16_t nn_lb = k, nn_rb = nn+1; // invariant nr >= binomial::data.table[nn_lb-1][k]
                 while (nn_lb < nn_rb) {
                     uint16_t nn_mid = (nn_lb + nn_rb) / 2;
-                    if (nr >= binomial::data.table[nn_mid-1][k]) {
+                    if (nr >= binomial::data.table_tr[k][nn_mid-1]) {
                         nn_lb = nn_mid+1;
                     } else {
                         nn_rb = nn_mid;
@@ -431,7 +437,7 @@ struct rrr_helper {
                     return result;
                 }
                 ++result;
-                nr -= binomial::data.table[nn-1][k];
+                nr -= binomial::data.table_tr[k][nn-1];
                 --k;
                 --nn;
             }
@@ -441,8 +447,8 @@ struct rrr_helper {
                 if (i >= off) {
                     return result;
                 }
-                if (nr >= binomial::data.table[nn-1][k]) {
-                    nr -= binomial::data.table[nn-1][k];
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    nr -= binomial::data.table_tr[k][nn-1];
                     --k;
                     ++result;
                 }
@@ -472,7 +478,7 @@ struct rrr_helper {
                 uint16_t nn_lb = k, nn_rb = nn+1; // invariant nr >= binomial::data.table[nn_lb-1][k]
                 while (nn_lb < nn_rb) {
                     uint16_t nn_mid = (nn_lb + nn_rb) / 2;
-                    if (nr >= binomial::data.table[nn_mid-1][k]) {
+                    if (nr >= binomial::data.table_tr[k][nn_mid-1]) {
                         nn_lb = nn_mid+1;
                     } else {
                         nn_rb = nn_mid;
@@ -483,7 +489,7 @@ struct rrr_helper {
                     return std::make_pair((n-nn) == off, result);
                 }
                 ++result;
-                nr -= binomial::data.table[nn-1][k];
+                nr -= binomial::data.table_tr[k][nn-1];
                 --k;
                 --nn;
             }
@@ -493,10 +499,10 @@ struct rrr_helper {
                 if (i > off) {
                     return std::make_pair(false, result);
                 }
-                if (nr >= binomial::data.table[nn-1][k]) {
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
                     if (i == off)
                         return std::make_pair(true, result);
-                    nr -= binomial::data.table[nn-1][k];
+                    nr -= binomial::data.table_tr[k][nn-1];
                     --k;
                     ++result;
                 }
@@ -526,14 +532,14 @@ struct rrr_helper {
                 uint16_t nn_lb = k, nn_rb = nn+1; // invariant nr >= iii.m_coefficients[nn_lb-1]
                 while (nn_lb < nn_rb) {
                     uint16_t nn_mid = (nn_lb + nn_rb) / 2;
-                    if (nr >= binomial::data.table[nn_mid-1][k]) {
+                    if (nr >= binomial::data.table_tr[k][nn_mid-1]) {
                         nn_lb = nn_mid+1;
                     } else {
                         nn_rb = nn_mid;
                     }
                 }
                 nn = nn_lb-1;
-                nr -= binomial::data.table[nn-1][k];
+                nr -= binomial::data.table_tr[k][nn-1];
                 --sel;
                 --nn;
                 --k;
@@ -542,8 +548,8 @@ struct rrr_helper {
         } else {
             int i = 0;
             while (sel > 0) {   // TODO: this condition only work if the precondition holds
-                if (nr >= binomial::data.table[nn-1][k]) {
-                    nr -= binomial::data.table[nn-1][k];
+                if (nr >= binomial::data.table_tr[k][nn-1]) {
+                    nr -= binomial::data.table_tr[k][nn-1];
                     --sel;
                     --k;
                 }
@@ -565,8 +571,8 @@ struct rrr_helper {
         while (sel > 0) {   // TODO: this condition only work if the precondition holds
             decoded_pattern = decoded_pattern<<1;
             ++decoded_len;
-            if (nr >= binomial::data.table[nn-1][k]) {
-                nr -= binomial::data.table[nn-1][k];
+            if (nr >= binomial::data.table_tr[k][nn-1]) {
+                nr -= binomial::data.table_tr[k][nn-1];
                 // a one is decoded
                 decoded_pattern |= 1; // add to the pattern
                 --k;
