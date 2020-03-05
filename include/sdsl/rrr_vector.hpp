@@ -313,7 +313,7 @@ class rrr_vector
         {
             uint64_t res = 0;
             size_type bb_idx = idx/t_bs; // begin block index
-            size_type bb_off = idx%t_bs; // begin block offset
+            uint16_t bb_off = idx%t_bs; // begin block offset
             uint16_t bt = m_bt[bb_idx];
             size_type sample_pos = bb_idx/t_k;
             size_type eb_idx = (idx+len-1)/t_bs; // end block index
@@ -341,8 +341,7 @@ class rrr_vector
                     idx += b_len;
                     b_len_sum += b_len;
                     len -= b_len;
-                    b_len = t_bs;
-                    b_len = std::min((uint16_t)len, b_len);
+                    b_len = std::min((uint16_t)len, t_bs);
                 } while (len > 0);
             }
             return res;
@@ -616,6 +615,12 @@ class select_support_rrr
                 btnrp += (btnrlen=rrr_helper_type::space_for_bt(bt));
             }
             rank -= bt;
+#ifndef RRR_NO_OPT
+            assert(bt != 0);
+            if (bt == t_bs) { // very effective optimization
+                return (idx-1) * t_bs + i-rank-1;
+            }
+#endif
             number_type btnr = rrr_helper_type::decode_btnr(m_v->m_btnr, btnrp-btnrlen, btnrlen);
             // blocks with more than n/2 1-bits are inverted
             return (idx-1) * t_bs + ((bt <= t_bs/2)
@@ -656,6 +661,12 @@ class select_support_rrr
                 btnrp += (btnrlen=rrr_helper_type::space_for_bt(bt));
             }
             rank -= (t_bs-bt);
+#ifndef RRR_NO_OPT
+            assert(bt != t_bs);
+            if (bt == 0) { // very effective optimization
+                return (idx-1) * t_bs + i-rank-1;
+            }
+#endif
             number_type btnr = rrr_helper_type::decode_btnr(m_v->m_btnr, btnrp-btnrlen, btnrlen);
             // blocks with more than n/2 1-bits are inverted
             return (idx-1) * t_bs + ((bt <= t_bs/2)

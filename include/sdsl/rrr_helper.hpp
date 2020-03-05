@@ -320,7 +320,7 @@ struct rrr_helper {
 #ifndef RRR_NO_OPT
         assert(k != 0 && k != n); // this must have already been checked in the caller
         if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
-            return (n-static_cast<uint64_t>(nr)-1) == off; // position n-nr-1
+            return (n-static_cast<uint16_t>(nr)-1) == off; // position n-nr-1
         }
 #endif
         uint16_t nn = n;
@@ -360,7 +360,7 @@ struct rrr_helper {
                 ++i;
             }
         }
-        return (n-static_cast<uint64_t>(nr)-1) == off;
+        return (n-static_cast<uint16_t>(nr)-1) == off;
     }
 
     //! Decode the len-bit integer starting at position \f$ off \f$ of the block encoded by the pair (k, nr).
@@ -368,8 +368,9 @@ struct rrr_helper {
 #ifndef RRR_NO_OPT
         assert(k != 0 && k != n); // this must have already been checked in the caller
         if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
-            if (n-static_cast<uint64_t>(nr)-1 >= off and n-static_cast<uint64_t>(nr)-1 <= (uint64_t)(off+len-1)) {
-                return 1ULL << ((n-static_cast<uint64_t>(nr)-1)-off);
+            uint16_t pos = (n-static_cast<uint16_t>(nr)-1);
+            if (pos >= off and pos <= (off+len-1)) {
+                return 1ULL << (pos-off);
             } else
                 return 0;
         }
@@ -390,8 +391,9 @@ struct rrr_helper {
             --nn;
             ++i;
         }
-        if (n-static_cast<uint64_t>(nr)-1 >= off and n-static_cast<uint64_t>(nr)-1 <= (uint64_t)(off+len-1)) {
-            res |= 1ULL << ((n-static_cast<uint64_t>(nr)-1)-off);
+        uint16_t pos = (n-static_cast<uint16_t>(nr)-1);
+        if (pos >= off and pos <= (off+len-1)) {
+            res |= 1ULL << (pos-off);
         }
         return res;
     }
@@ -401,8 +403,8 @@ struct rrr_helper {
     static inline uint16_t decode_popcount(uint16_t k, number_type nr, uint16_t off) {
 #ifndef RRR_NO_OPT
         assert(k != 0 && k != n); // this must have already been checked in the caller
-        if (k == 1) { // if k==1 then the encoded block contains exactly on set bit at
-            return (n-static_cast<uint64_t>(nr)-1) < off; // position n-nr-1, and popcount is 1 if off > (n-nr-1).
+        if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
+            return (n-static_cast<uint16_t>(nr)-1) < off;
         }
 #endif
         uint16_t result = 0;
@@ -443,7 +445,7 @@ struct rrr_helper {
                 ++i;
             }
         }
-        return result + ((n-static_cast<uint64_t>(nr)-1) < off);
+        return result + ((n-static_cast<uint16_t>(nr)-1) < off);
     }
 
 
@@ -453,8 +455,8 @@ struct rrr_helper {
 #ifndef RRR_NO_OPT
         assert(k != 0 && k != n); // this must have already been checked in the caller
         if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
-            uint16_t pos = (n-static_cast<uint64_t>(nr)-1);
-            return std::make_pair(pos == off, (uint16_t)pos < off);
+            uint16_t pos = (n-static_cast<uint16_t>(nr)-1);
+            return std::make_pair(pos == off, pos < off);
         }
 #endif
         uint16_t result = 0;
@@ -497,19 +499,19 @@ struct rrr_helper {
                 ++i;
             }
         }
-        return std::make_pair((n-static_cast<uint64_t>(nr)-1) == off,
-                              result + ((n-static_cast<uint64_t>(nr)-1) < off));
+        uint16_t pos = (n-static_cast<uint16_t>(nr)-1);
+        return std::make_pair(pos == off, result + (pos < off));
     }
 
 
     /*! \pre k >= sel, sel>0
      */
-    static inline uint16_t decode_select(uint16_t k, number_type& nr, uint16_t sel) {
+    static inline uint16_t decode_select(uint16_t k, number_type nr, uint16_t sel) {
 #ifndef RRR_NO_OPT
-        if (k == n) {  // if n==k, then the encoded block consists only of ones
-            return sel-1;
-        } else if (k == 1 and sel == 1) {
-            return n-static_cast<uint64_t>(nr)-1;
+        assert(k != 0 && k != n); // this must have already been checked in the caller
+        if (k == 1) {
+            assert(sel == 1);
+            return n-static_cast<uint16_t>(nr)-1;
         }
 #endif
         uint16_t nn = n;
@@ -549,7 +551,14 @@ struct rrr_helper {
 
     /*! \pre k >= sel, sel>0
      */
-    static inline uint16_t decode_select0(uint16_t k, number_type& nr, uint16_t sel) {
+    static inline uint16_t decode_select0(uint16_t k, number_type nr, uint16_t sel) {
+#ifndef RRR_NO_OPT
+        assert(k != 0 && k != n); // this must have already been checked in the caller
+        if (k == 1) {
+            assert(sel < n);
+            return sel-1 + (n-static_cast<uint16_t>(nr)-1 < sel);
+        }
+#endif
         uint16_t nn = n;
         while (sel > 0) {   // TODO: this condition only work if the precondition holds
             if (nr >= binomial::data.table_tr[k][nn-1]) {
@@ -568,8 +577,7 @@ struct rrr_helper {
     /*! \pre k >= sel, sel>0
      */
     template<uint8_t pattern, uint8_t len>
-    static inline uint16_t decode_select_bitpattern(uint16_t k, number_type& nr, uint16_t sel) {
-        int i = 0;
+    static inline uint16_t decode_select_bitpattern(uint16_t k, number_type nr, uint16_t sel) {
         uint8_t decoded_pattern = 0;
         uint8_t decoded_len     = 0;
         uint16_t nn = n;
@@ -583,7 +591,6 @@ struct rrr_helper {
                 --k;
             }
             --nn;
-            ++i;
             if (decoded_len == len) {  // if decoded pattern length equals len of the searched pattern
                 if (decoded_pattern == pattern) {  // and pattern equals the searched pattern
                     --sel;
@@ -591,7 +598,7 @@ struct rrr_helper {
                 decoded_pattern = 0; decoded_len = 0; // reset pattern
             }
         }
-        return i-len; // return the starting position of $sel$th occurence of the pattern
+        return n-nn-len; // return the starting position of $sel$th occurence of the pattern
     }
 
 };
