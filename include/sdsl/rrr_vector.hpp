@@ -204,6 +204,11 @@ class rrr_vector
                 sum_rank += k;
                 if (space_for_bt) {
                     number_type bin = rrr_helper_type::decode_btnr(bv, pos, t_bs);
+                    // invert blocks with more than n/2 1-bits
+                    if (k > t_bs/2) {
+                        k = t_bs - k;
+                        bin = (~bin) & rrr_helper_type::binomial::data.L1Mask;
+                    }
                     number_type nr = rrr_helper_type::bin_to_nr(bin, k);
                     rrr_helper_type::set_bt(m_btnr, btnr_pos, nr, space_for_bt);
                 }
@@ -224,6 +229,11 @@ class rrr_vector
                 sum_rank += k;
                 if (space_for_bt) {
                     number_type bin = rrr_helper_type::decode_btnr(bv, pos, m_size-pos);
+                    // invert blocks with more than n/2 1-bits
+                    if (k > t_bs/2) {
+                        k = t_bs - k;
+                        bin = (~bin) & rrr_helper_type::binomial::data.L1Mask;
+                    }
                     number_type nr = rrr_helper_type::bin_to_nr(bin, k);
                     rrr_helper_type::set_bt(m_btnr, btnr_pos, nr, space_for_bt);
                 }
@@ -270,8 +280,11 @@ class rrr_vector
             }
             uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
-            assert(rrr_helper_type::decode_bit(bt, btnr, i % t_bs) == inverse_select(i).first);
-            return rrr_helper_type::decode_bit(bt, btnr, i % t_bs);
+            // blocks with more than n/2 1-bits are inverted
+            value_type bit = (bt <= t_bs/2) ? rrr_helper_type::decode_bit(bt, btnr, i % t_bs)
+                                            : !rrr_helper_type::decode_bit(t_bs - bt, btnr, i % t_bs);
+            assert(bit == inverse_select(i).first);
+            return bit;
         }
 
         //! Accessing the i-th element of the original bit_vector and rank at
@@ -314,8 +327,10 @@ class rrr_vector
 #endif
             uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
-            std::pair<bool, uint16_t> pair = rrr_helper_type::decode_bit_and_popcount(bt, btnr, off);
-            return std::make_pair(pair.first, rank + pair.second);
+            // blocks with more than n/2 1-bits are inverted
+            std::pair<bool, uint16_t> pair = rrr_helper_type::decode_bit_and_popcount((bt <= t_bs/2) ? bt : t_bs - bt, btnr, off);
+            return (bt <= t_bs/2) ? std::make_pair(pair.first, rank + pair.second)
+                                  : std::make_pair(!pair.first, rank + (off - pair.second));
         }
 
         //! Get the integer value of the binary string of length len starting at position idx.
@@ -348,7 +363,9 @@ class rrr_vector
                     }
                     uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
                     number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
-                    res =  rrr_helper_type::decode_int(bt, btnr, bb_off, len);
+                    // blocks with more than n/2 1-bits are inverted
+                    res = (bt <= t_bs/2) ? rrr_helper_type::decode_int(bt, btnr, bb_off, len)
+                                         : (~rrr_helper_type::decode_int(t_bs - bt, btnr, bb_off, len)) & bits::lo_set[len];
                 }
             } else { // solve multiple block case by recursion
                 uint16_t b_len = t_bs-bb_off; // remaining bits in first block
@@ -524,7 +541,9 @@ class rank_support_rrr
 #endif
             uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_v->m_btnr, btnrp, btnrlen);
-            uint16_t popcnt  = rrr_helper_type::decode_popcount(bt, btnr, off);
+            // blocks with more than n/2 1-bits are inverted
+            uint16_t popcnt = (bt <= t_bs/2) ? rrr_helper_type::decode_popcount(bt, btnr, off)
+                                             : off - rrr_helper_type::decode_popcount(t_bs - bt, btnr, off);
             assert(i >= size() || rank + popcnt == m_v->inverse_select(i).second);
             return rank_support_rrr_trait<t_b>::adjust_rank(rank + popcnt, i);
         }
@@ -635,7 +654,10 @@ class select_support_rrr
             }
             rank -= bt;
             number_type btnr = rrr_helper_type::decode_btnr(m_v->m_btnr, btnrp-btnrlen, btnrlen);
-            return (idx-1) * t_bs + rrr_helper_type::decode_select(bt, btnr, i-rank);
+            // blocks with more than n/2 1-bits are inverted
+            return (idx-1) * t_bs + ((bt <= t_bs/2)
+                                                ? rrr_helper_type::decode_select(bt, btnr, i-rank)
+                                                : rrr_helper_type::decode_select0(t_bs - bt, btnr, i-rank));
         }
 
         size_type select0(size_type i)const
@@ -673,7 +695,10 @@ class select_support_rrr
             }
             rank -= (t_bs-bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_v->m_btnr, btnrp-btnrlen, btnrlen);
-            return (idx-1) * t_bs + rrr_helper_type::decode_select0(bt, btnr, i-rank);
+            // blocks with more than n/2 1-bits are inverted
+            return (idx-1) * t_bs + ((bt <= t_bs/2)
+                                                ? rrr_helper_type::decode_select0(bt, btnr, i-rank)
+                                                : rrr_helper_type::decode_select(t_bs - bt, btnr, i-rank));
         }
 
 
