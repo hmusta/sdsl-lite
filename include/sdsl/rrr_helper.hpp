@@ -178,9 +178,6 @@ struct binomial_table {
     static struct impl {
         number_type table[n+1][n+1];
         number_type table_tr[n+1][n]; // table[][] transposed, without the last column, for faster column acceess.
-        number_type L1Mask[n+1]; // L1Mask[i] contains a word with the i least significant bits set to 1.
-        // i.e. L1Mask[0] = 0, L1Mask[1] = 1,...
-        number_type O1Mask[n]; // O1Mask[i] contains a word with the i least significant bits set to 0.
 
         impl() {
             for (uint16_t k=0; k <= n; ++k) {
@@ -201,16 +198,6 @@ struct binomial_table {
                 for (int k=0; k<=n; ++k) {
                     table_tr[k][nn] = table[nn][k];
                 }
-            }
-            L1Mask[0] = 0;
-            number_type mask = 1;
-            O1Mask[0] = 1;
-            for (int i=1; i<=n; ++i) {
-                L1Mask[i] = mask;
-                if (i < n)
-                    O1Mask[i] = O1Mask[i-1]<<1;
-                mask <<= 1;
-                mask |= 1;
             }
         }
     } data;
@@ -254,8 +241,8 @@ struct binomial_coefficients {
 #else
         static const uint16_t BINARY_SEARCH_THRESHOLD = 0;
 #endif
-        number_type(&L1Mask)[MAX_SIZE+1] = tBinom::data.L1Mask;
-        number_type(&O1Mask)[MAX_SIZE] = tBinom::data.O1Mask;
+        // L1Mask contains a word with the n least significant bits set to 1.
+        number_type L1Mask = (~(number_type)0) >> (sizeof(number_type) * 8 - n);
 
         impl() {
             static typename binomial_table<n,number_type>::impl tmp_data;
@@ -311,7 +298,7 @@ struct rrr_helper {
     }
 
     static inline number_type bin_to_nr(number_type bin) {
-        if (!bin or bin == binomial::data.L1Mask[n]) {  // handle special case
+        if (!bin or bin == binomial::data.L1Mask) {  // handle special case
             return 0;
         }
         number_type nr = 0;
