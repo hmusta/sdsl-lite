@@ -297,12 +297,12 @@ struct rrr_helper {
         return trait::popcount(trait::get_int(bv, pos, block_size));
     }
 
-    static inline number_type bin_to_nr(number_type bin) {
+    static inline number_type bin_to_nr(number_type bin, uint16_t k) {
         if (!bin or bin == binomial::data.L1Mask) {  // handle special case
             return 0;
         }
         number_type nr = 0;
-        uint16_t  k  = trait::popcount(bin);
+        assert(k == trait::popcount(bin));
         uint16_t  nn = n; // size of the block
         while (bin) {
             if (bin & 1ULL) {

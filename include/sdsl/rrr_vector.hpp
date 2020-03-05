@@ -200,10 +200,11 @@ class rrr_vector
                     }
                 }
                 uint16_t space_for_bt = rrr_helper_type::space_for_bt(x=bt_array[i++]);
-                sum_rank += (invert ? (t_bs - x) : x);
+                uint16_t k = invert ? (t_bs - x) : x;
+                sum_rank += k;
                 if (space_for_bt) {
                     number_type bin = rrr_helper_type::decode_btnr(bv, pos, t_bs);
-                    number_type nr = rrr_helper_type::bin_to_nr(bin);
+                    number_type nr = rrr_helper_type::bin_to_nr(bin, k);
                     rrr_helper_type::set_bt(m_btnr, btnr_pos, nr, space_for_bt);
                 }
                 btnr_pos += space_for_bt;
@@ -219,17 +220,16 @@ class rrr_vector
                 uint16_t space_for_bt = rrr_helper_type::space_for_bt(x=bt_array[i++]);
 //          no extra dummy block added to bt_array, therefore this condition should hold
                 assert(i == bt_array.size());
-                sum_rank += invert ? (t_bs - x) : x;
+                uint16_t k = invert ? (t_bs - x) : x;
+                sum_rank += k;
                 if (space_for_bt) {
                     number_type bin = rrr_helper_type::decode_btnr(bv, pos, m_size-pos);
-                    number_type nr = rrr_helper_type::bin_to_nr(bin);
+                    number_type nr = rrr_helper_type::bin_to_nr(bin, k);
                     rrr_helper_type::set_bt(m_btnr, btnr_pos, nr, space_for_bt);
                 }
                 btnr_pos += space_for_bt;
-                assert(m_rank.size()-1 == ((i+t_k-1)/t_k));
-            } else { // handle last empty full block
-                assert(m_rank.size()-1 == ((i+t_k-1)/t_k));
             }
+            assert(m_rank.size()-1 == ((i+t_k-1)/t_k));
             // for technical reasons we add a last element to m_rank
             m_rank[ m_rank.size()-1 ] = sum_rank; // sum_rank contains the total number of set bits in bv
             m_bt = bt_array;
