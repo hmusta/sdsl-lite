@@ -549,6 +549,24 @@ struct rrr_helper {
 
     /*! \pre k >= sel, sel>0
      */
+    static inline uint16_t decode_select0(uint16_t k, number_type& nr, uint16_t sel) {
+        uint16_t nn = n;
+        while (sel > 0) {   // TODO: this condition only work if the precondition holds
+            if (nr >= binomial::data.table_tr[k][nn-1]) {
+                nr -= binomial::data.table_tr[k][nn-1];
+                // a one is decoded
+                --k;
+            } else {
+                // a zero is decoded
+                --sel;
+            }
+            --nn;
+        }
+        return n-nn-1; // return the starting position of $sel$th occurence of the pattern
+    }
+
+    /*! \pre k >= sel, sel>0
+     */
     template<uint8_t pattern, uint8_t len>
     static inline uint16_t decode_select_bitpattern(uint16_t k, number_type& nr, uint16_t sel) {
         int i = 0;

@@ -673,7 +673,7 @@ class select_support_rrr
             }
             rank -= (t_bs-bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_v->m_btnr, btnrp-btnrlen, btnrlen);
-            return (idx-1) * t_bs + rrr_helper_type::template decode_select_bitpattern<0, 1>(bt, btnr, i-rank);
+            return (idx-1) * t_bs + rrr_helper_type::decode_select0(bt, btnr, i-rank);
         }
 
 
