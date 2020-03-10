@@ -49,21 +49,21 @@ class elias_delta
             {
                 // initialize prefixsum
                 for (uint64_t x=0; x < (1<<16); ++x) {
-                    const uint64_t* w = &x; // copy of x
                     uint64_t value = 0;
                     uint16_t numbers = 0, offset=0, offset2=0;
-                    while ((x >> offset) !=0) {
-                        uint64_t len_1_len = bits::read_unary(w, offset), len = 0;
+                    uint64_t w;
+                    while ((w=(x >> offset)) !=0) {
+                        uint64_t len_1_len = bits::lo(w), len = 0;
                         if (len_1_len == 0) {
                             offset += 1;
                             value += 1;
                             ++numbers;
                         } else {
                             offset2 = offset + len_1_len +1;
-                            len = bits::read_int(w, offset2, len_1_len) + (1ULL << len_1_len);
+                            len = ((x >> offset2) & bits::lo_set[len_1_len]) + (1ULL << len_1_len);
                             offset2 += len_1_len;
                             if (offset2 + len-1 <= 16) {
-                                value += bits::read_int(w, offset2, len-1) + (1ULL << (len-1));
+                                value += ((x >> offset2) & bits::lo_set[len-1]) + (1ULL << (len-1));
                                 offset = offset2 + len - 1;
                                 ++numbers;
                             } else break;
@@ -80,21 +80,21 @@ class elias_delta
 
                 for (uint32_t maxi=1, idx=0; maxi<=8; ++maxi) {
                     for (uint64_t x=0; x < (1<<8); ++x) {
-                        const uint64_t* w = &x; // copy of x
                         uint64_t value = 0;
                         uint32_t numbers = 0, offset=0, offset2=0;
-                        while ((x >> offset) !=0 and numbers < maxi) {
-                            uint64_t len_1_len = bits::read_unary(w, offset), len = 0;
+                        uint64_t w;
+                        while ((w=(x >> offset)) !=0 and numbers < maxi) {
+                            uint64_t len_1_len = bits::lo(w), len = 0;
                             if (len_1_len == 0) {
                                 offset += 1;
                                 value += 1;
                                 ++numbers;
                             } else {
                                 offset2 = offset + len_1_len +1;
-                                len = bits::read_int(w, offset2, len_1_len) + (1ULL << len_1_len);
+                                len = ((x >> offset2) & bits::lo_set[len_1_len]) + (1ULL << len_1_len);
                                 offset2 += len_1_len;
                                 if (offset2 + len-1 <= 8) {
-                                    value += bits::read_int(w, offset2, len-1) + (1ULL << (len-1));
+                                    value += ((x >> offset2) & bits::lo_set[len-1]) + (1ULL << (len-1));
                                     offset = offset2 + len - 1;
                                     ++numbers;
                                 } else break;
