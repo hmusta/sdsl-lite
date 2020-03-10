@@ -170,28 +170,22 @@ struct binomial_coefficients_trait<8> {
 template<uint16_t n, class number_type>
 struct binomial_table {
     static struct impl {
-        number_type table[n+1][n+1];
-        number_type table_tr[n+1][n]; // table[][] transposed, without the last column, for faster column acceess.
+        number_type table_tr[n+1][n]; // a table with binomial coefficients, table_tr[k][n] = {n choose k}.
         uint16_t ubound_n[n+1][n]; // map (t, k) to the largest n for which \binom{n-1}{k} <= 2^(t+1)-1.
 
         impl() {
-            for (uint16_t k=0; k <= n; ++k) {
-                table[k][k] = 1;    // initialize diagonal
+            for (uint16_t nn=0; nn < n; ++nn) {
+                table_tr[nn][nn] = 1;    // initialize diagonal
             }
-            for (uint16_t k=0; k <= n; ++k) {
-                table[0][k] = 0;    // initialize first row
+            for (uint16_t k=1; k <= n; ++k) {
+                table_tr[k][0] = 0;    // initialize first column
             }
-            for (uint16_t nn=0; nn <= n; ++nn) {
-                table[nn][0] = 1;    // initialize first column
+            for (uint16_t nn=0; nn < n; ++nn) {
+                table_tr[0][nn] = 1;    // initialize first row
             }
-            for (int nn=1; nn<=n; ++nn) {
-                for (int k=1; k<=n; ++k) {
-                    table[nn][k] = table[nn-1][k-1] + table[nn-1][k];
-                }
-            }
-            for (int nn=0; nn<n; ++nn) {
-                for (int k=0; k<=n; ++k) {
-                    table_tr[k][nn] = table[nn][k];
+            for (int k=1; k<=n; ++k) {
+                for (int nn=1; nn<n; ++nn) {
+                    table_tr[k][nn] = table_tr[k-1][nn-1] + table_tr[k][nn-1];
                 }
             }
             number_type bound = 0;
@@ -199,7 +193,7 @@ struct binomial_table {
                 bound = (bound << 1) | 1; // bound = 2^(t+1)-1
                 for (int k=0; k<=n; ++k) {
                     for (int nn=1; nn<=n; ++nn) {
-                        if (table[nn-1][k] <= bound) { // \binom{nn-1}{k} <= 2^(t+1)-1.
+                        if (table_tr[k][nn-1] <= bound) { // \binom{nn-1}{k} <= 2^(t+1)-1.
                             ubound_n[k][t] = nn;
                         } else {
                             break;
@@ -249,10 +243,12 @@ struct binomial_coefficients {
         number_type L1Mask = (~(number_type)0) >> (sizeof(number_type) * 8 - n);
 
         impl() {
-            static typename binomial_table<n,number_type>::impl tmp_data;
-            for (int k=0; k<=n; ++k) {
-                space[k] = (tmp_data.table[n][k] == 1ULL) ? 0 : trait::hi(tmp_data.table[n][k]) + 1;
+            static typename tBinom::impl tmp_data;
+            space[0] = 0;
+            for (int k=1; k<n; ++k) {
+                space[k] = trait::hi(tmp_data.table_tr[k-1][n-1] + tmp_data.table_tr[k][n-1]) + 1;
             }
+            space[n] = 0;
         }
     } data;
 };
