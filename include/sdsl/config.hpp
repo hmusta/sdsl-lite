@@ -50,12 +50,20 @@ template<uint8_t width>
 struct key_text_trait {
     static const char* KEY_TEXT;
 };
+template<>
+const char* key_text_trait<0>::KEY_TEXT;
+template<>
+const char* key_text_trait<8>::KEY_TEXT;
 
 //! Helper classes to transform width=0 and width=8 to corresponding bwt key
 template<uint8_t width>
 struct key_bwt_trait {
     static const char* KEY_BWT;
 };
+template<>
+const char* key_bwt_trait<0>::KEY_BWT;
+template<>
+const char* key_bwt_trait<8>::KEY_BWT;
 }
 
 #endif
