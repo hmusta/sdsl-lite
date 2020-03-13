@@ -295,6 +295,50 @@ class rrr_vector
                                   : std::make_pair(!pair.first, rank + (off - pair.second));
         }
 
+        //! Accessing the i-th element of the original bit_vector and if the
+        //  bit is set, query the rank at that position, the umber of 1-bits
+        //  in the prefix [0..i]. If the bit is unset, return zero.
+        /*! \param i An index i with \f$ 0 \leq i < size()  \f$.
+           \return The number of 1-bits in the prefix [0..i], or zero.
+        */
+        size_type conditional_rank(size_type i)const
+        {
+            assert(i<size());
+            size_type bt_idx = i/t_bs;
+            size_type sample_pos = bt_idx/t_k;
+            size_type rank = m_rank[ sample_pos ];
+            uint16_t bt = m_bt[ bt_idx ];
+#ifndef RRR_NO_OPT
+            assert(sample_pos+1 < m_rank.size());
+            if (bt == 0) {
+                return 0;
+            } else if (bt == t_bs && m_rank[ sample_pos+1 ] == rank + (size_type)t_bs*t_k) {
+                return rank + (i - sample_pos*t_k*t_bs) + 1;
+            }
+#endif
+            size_type btnrp = m_btnrp[ sample_pos ];
+            for (size_type j = sample_pos*t_k; j < bt_idx; ++j) {
+                rank  += m_bt[j];
+                btnrp += rrr_helper_type::space_for_bt(m_bt[j]);
+            }
+            uint16_t off = i % t_bs;
+#ifdef RRR_NO_OPT
+            if (bt == 0) {
+                return 0;
+            }
+#endif
+            if (bt == t_bs) { // very effective optimization
+                return rank + off + 1;
+            }
+            uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
+            number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
+            // blocks with more than n/2 1-bits are inverted
+            std::pair<bool, uint16_t> pair = rrr_helper_type::decode_bit_and_popcount((bt <= t_bs/2) ? bt : t_bs - bt, btnr, off);
+            return (bt <= t_bs/2)
+                        ? (pair.first ? rank + pair.second + 1 : 0)
+                        : (!pair.first ? rank + (off - pair.second) + 1 : 0);
+        }
+
         //! Get the integer value of the binary string of length len starting at position idx.
         /*! \param idx Starting index of the binary representation of the integer.
          *  \param len Length of the binary representation of the integer. Default value is 64.

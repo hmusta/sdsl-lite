@@ -452,46 +452,23 @@ struct rrr_helper {
     static inline std::pair<bool, uint16_t>
     decode_bit_and_popcount(uint16_t k, number_type nr, uint16_t off) {
         assert(k != 0 && k != n); // this must have already been checked in the caller
-#ifndef RRR_NO_OPT
-        if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
-            uint16_t pos = (n-static_cast<uint16_t>(nr)-1);
-            return std::make_pair(pos == off, pos < off);
-        }
-#endif
         uint16_t result = 0;
         uint16_t nn = std::min(n, binomial::data.ubound_n[k][trait::hi(nr)]);
         assert(nn <= n);
-        if (k < binomial::data.LINEAR_SEARCH_THRESHOLD) {
-            while (k > 1) {
-                if (n-nn > off) {
-                    return std::make_pair(false, result);
-                }
-                if (nr >= binomial::data.table_tr[k][nn-1]) {
-                    if (n-nn == off)
-                        return std::make_pair(true, result);
-                    nr -= binomial::data.table_tr[k][nn-1];
-                    --k;
-                    ++result;
-                    nn = std::min((int)nn, binomial::data.ubound_n[k][trait::hi(nr)] + 1);
-                }
-                --nn;
+        int i = n-nn;
+        while (k > 1) {
+            if (i > off) {
+                return std::make_pair(false, result);
             }
-        } else { // else do a linear decoding
-            int i = n-nn;
-            while (k > 1) {
-                if (i > off) {
-                    return std::make_pair(false, result);
-                }
-                if (nr >= binomial::data.table_tr[k][nn-1]) {
-                    if (i == off)
-                        return std::make_pair(true, result);
-                    nr -= binomial::data.table_tr[k][nn-1];
-                    --k;
-                    ++result;
-                }
-                --nn;
-                ++i;
+            if (nr >= binomial::data.table_tr[k][nn-1]) {
+                if (i == off)
+                    return std::make_pair(true, result);
+                nr -= binomial::data.table_tr[k][nn-1];
+                --k;
+                ++result;
             }
+            --nn;
+            ++i;
         }
         uint16_t pos = (n-static_cast<uint16_t>(nr)-1);
         return std::make_pair(pos == off, result + (pos < off));
