@@ -824,7 +824,7 @@ class rank_support_hyb
 /*!
  * \tparam t_b            The bit pattern of size one. (so `0` or `1`)
  * \tparam k_sblock_rate  Superblock rate (number of blocks inside superblock)
- * TODO: implement select queries, currently this is dummy class.
+ * TODO: implement select queries, currently this uses binary search on rank.
  */
 template<uint8_t t_b, uint32_t k_sblock_rate>
 class select_support_hyb
@@ -835,7 +835,8 @@ class select_support_hyb
         enum { bit_pat = t_b };
         enum { bit_pat_len = (uint8_t)1 };
     private:
-        const bit_vector_type* m_v;
+        const bit_vector_type *m_v;
+        rank_support_hyb<t_b, k_sblock_rate> rank;
 
     public:
         //! Standard constructor
@@ -845,10 +846,25 @@ class select_support_hyb
         }
 
         //! Answers select queries
-        size_type select(size_type) const
+        size_type select(size_type i) const
         {
-            fprintf(stderr, "\nhyb_vector: select queries are not currently supported\n");
-            std::exit(EXIT_FAILURE);
+            assert(i > 0);
+            if (i > rank(size())) {
+                return size();
+            }
+            // do binary search
+            size_type begin = 0;
+            size_type end = size();
+            size_type idx;
+            while (end - begin > 1) {
+                idx = (begin + end) / 2;
+                if (rank(idx) >= i) {
+                    end = idx;
+                } else {
+                    begin = idx;
+                }
+            }
+            return begin;
         }
 
         //! Shorthand for select(i)
@@ -867,6 +883,7 @@ class select_support_hyb
         void set_vector(const bit_vector_type* v = nullptr)
         {
             m_v = v;
+            rank = rank_support_hyb<t_b, k_sblock_rate>(v);
         }
 
         //! Assignment operator
@@ -879,7 +896,10 @@ class select_support_hyb
         }
 
         //! Swap method
-        void swap(select_support_hyb&) {}
+        void swap(select_support_hyb &other) {
+            std::swap(m_v, other.m_v);
+            rank.swap(other.rank);
+        }
 
         //! Load the data structure from a stream and set the supported vector
         void load(std::istream&, const bit_vector_type* v = nullptr)
