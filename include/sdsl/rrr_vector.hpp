@@ -267,33 +267,27 @@ class rrr_vector
             size_type bt_idx = i/t_bs;
             size_type sample_pos = bt_idx/t_k;
             size_type rank = m_rank[ sample_pos ];
+            uint16_t bt = m_bt[ bt_idx ];
 #ifndef RRR_NO_OPT
-            if (sample_pos+1 < m_rank.size()) {
-                size_type diff_rank  = m_rank[ sample_pos+1 ] - rank;
-                if (diff_rank == (size_type)0) {
-                    return  std::make_pair(false, rank);
-                } else if (diff_rank == (size_type)t_bs*t_k) {
-                    return  std::make_pair(true, rank + (i - sample_pos*t_k*t_bs));
-                }
+            assert(sample_pos+1 < m_rank.size());
+            if (bt == 0 && m_rank[ sample_pos+1 ] == rank) {
+                return  std::make_pair(false, rank);
+            } else if (bt == t_bs && m_rank[ sample_pos+1 ] == rank + (size_type)t_bs*t_k) {
+                return  std::make_pair(true, rank + (i - sample_pos*t_k*t_bs));
             }
 #endif
             size_type btnrp = m_btnrp[ sample_pos ];
-            uint16_t bt = 0, btnrlen = 0; // temp variables for block_type and space for block type
-            for (size_type j = sample_pos*t_k; j <= bt_idx; ++j) {
-                bt = m_bt[j];
-                rank  += bt;
-                btnrp += (btnrlen=rrr_helper_type::space_for_bt(bt));
+            for (size_type j = sample_pos*t_k; j < bt_idx; ++j) {
+                rank  += m_bt[j];
+                btnrp += rrr_helper_type::space_for_bt(m_bt[j]);
             }
-            rank -= bt;
-            btnrp -= btnrlen;
             uint16_t off = i % t_bs;
-#ifndef RRR_NO_OPT
             if (bt == 0) {
                 return  std::make_pair(false, rank);
             } else if (bt == t_bs) { // very effective optimization
                 return  std::make_pair(true, rank + off);
             }
-#endif
+            uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
             // blocks with more than n/2 1-bits are inverted
             std::pair<bool, uint16_t> pair = rrr_helper_type::decode_bit_and_popcount((bt <= t_bs/2) ? bt : t_bs - bt, btnr, off);
@@ -471,38 +465,30 @@ class rank_support_rrr
             size_type bt_idx = i/t_bs;
             size_type sample_pos = bt_idx/t_k;
             size_type rank  = m_v->m_rank[ sample_pos ];
+            uint16_t bt = m_v->m_bt[ bt_idx ];
 #ifndef RRR_NO_OPT
-            if (sample_pos+1 < m_v->m_rank.size()) {
-                size_type diff_rank  = m_v->m_rank[ sample_pos+1 ] - rank;
-                if (diff_rank == (size_type)0) {
+            if (i < m_v->size()) {
+                assert(sample_pos+1 < m_v->m_rank.size());
+                if (bt == 0 && m_v->m_rank[ sample_pos+1 ] == rank) {
                     return  rank_support_rrr_trait<t_b>::adjust_rank(rank, i);
-                } else if (diff_rank == (size_type)t_bs*t_k) {
+                } else if (bt == t_bs && m_v->m_rank[ sample_pos+1 ] == rank + (size_type)t_bs*t_k) {
                     return  rank_support_rrr_trait<t_b>::adjust_rank(
                                 rank + i - sample_pos*t_k*t_bs, i);
                 }
             }
 #endif
             size_type btnrp = m_v->m_btnrp[ sample_pos ];
-            uint16_t bt = 0, btnrlen = 0; // temp variables for block_type and space for block type
-            for (size_type j = sample_pos*t_k; j <= bt_idx; ++j) {
-                bt = m_v->m_bt[j];
-                rank  += bt;
-                btnrp += (btnrlen=rrr_helper_type::space_for_bt(bt));
+            for (size_type j = sample_pos*t_k; j < bt_idx; ++j) {
+                rank  += m_v->m_bt[j];
+                btnrp += rrr_helper_type::space_for_bt(m_v->m_bt[j]);
             }
-            rank -= bt;
-            btnrp -= btnrlen;
             uint16_t off = i % t_bs;
-            if (!off) {   // needed for special case: if i=size() is a multiple of t_bs
-                // the access to m_bt would cause a invalid memory access
-                return rank_support_rrr_trait<t_b>::adjust_rank(rank, i);
-            }
-#ifndef RRR_NO_OPT
-            if (bt == 0) {
+            if (!off || bt == 0) {
                 return  rank_support_rrr_trait<t_b>::adjust_rank(rank, i);
             } else if (bt == t_bs) { // very effective optimization
                 return  rank_support_rrr_trait<t_b>::adjust_rank(rank + off, i);
             }
-#endif
+            uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
             number_type btnr = rrr_helper_type::decode_btnr(m_v->m_btnr, btnrp, btnrlen);
             // blocks with more than n/2 1-bits are inverted
             uint16_t popcnt = (bt <= t_bs/2) ? rrr_helper_type::decode_popcount(bt, btnr, off)
@@ -582,8 +568,6 @@ class select_support_rrr
 
         size_type select1(size_type i)const
         {
-            if (m_v->m_rank[m_v->m_rank.size()-1] < i)
-                return size();
             //  (1) binary search for the answer in the rank_samples
             size_type begin=0, end=m_v->m_rank.size()-1; // min included, max excluded
             size_type idx, rank;
@@ -601,9 +585,11 @@ class select_support_rrr
             //   (2) linear search between the samples
             rank = m_v->m_rank[begin]; // now i>rank
             idx = begin * t_k; // initialize idx for select result
+            if (m_v->m_rank[end] < i) {
+                return size();
+            }
 #ifndef RRR_NO_OPT
-            size_type diff_rank  = m_v->m_rank[end] - rank;
-            if (diff_rank == (size_type)t_bs*t_k) {// optimisation for select<1>
+            if (m_v->m_rank[end] == rank + (size_type)t_bs*t_k) {// optimisation for select<1>
                 return idx*t_bs + i-rank -1;
             }
 #endif
@@ -630,9 +616,6 @@ class select_support_rrr
 
         size_type select0(size_type i)const
         {
-            if ((size() - m_v->m_rank[m_v->m_rank.size()-1]) < i) {
-                return size();
-            }
             //  (1) binary search for the answer in the rank_samples
             size_type begin=0, end=m_v->m_rank.size()-1; // min included, max excluded
             size_type idx, rank;
@@ -650,9 +633,14 @@ class select_support_rrr
             //   (2) linear search between the samples
             rank = begin*t_bs*t_k - m_v->m_rank[begin]; // now i>rank
             idx = begin * t_k; // initialize idx for select result
+            if (size() - m_v->m_rank[end] < i) {
+                return size();
+            }
+#ifndef RRR_NO_OPT
             if (m_v->m_rank[end] == m_v->m_rank[begin]) {      // only for select<0>
                 return idx*t_bs +  i-rank -1;
             }
+#endif
             size_type btnrp = m_v->m_btnrp[ begin ];
             uint16_t bt = 0, btnrlen = 0; // temp variables for block_type and space for block type
             while (i > rank) {

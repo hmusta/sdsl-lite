@@ -412,12 +412,7 @@ struct rrr_helper {
 
     //! Decode the first off bits bits of the block encoded by the pair (k, nr) and return the set bits.
     static inline uint16_t decode_popcount(uint16_t k, number_type nr, uint16_t off) {
-#ifndef RRR_NO_OPT
         assert(k != 0 && k != n); // this must have already been checked in the caller
-        if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
-            return (n-static_cast<uint16_t>(nr)-1) < off;
-        }
-#endif
         uint16_t result = 0;
         uint16_t nn = std::min(n, binomial::data.ubound_n[k][trait::hi(nr)]);
         assert(nn <= n);
@@ -453,11 +448,11 @@ struct rrr_helper {
     }
 
 
-    //! Decode the first off bits bits of the block encoded by the pair (k, nr) and return the set bits.
+    //! Decode the first |off| bits of the block encoded by the pair (k, nr) and return the set bits.
     static inline std::pair<bool, uint16_t>
     decode_bit_and_popcount(uint16_t k, number_type nr, uint16_t off) {
-#ifndef RRR_NO_OPT
         assert(k != 0 && k != n); // this must have already been checked in the caller
+#ifndef RRR_NO_OPT
         if (k == 1) { // if k==1 then the encoded block contains exactly one set bit
             uint16_t pos = (n-static_cast<uint16_t>(nr)-1);
             return std::make_pair(pos == off, pos < off);
