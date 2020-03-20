@@ -239,6 +239,7 @@ void select_support_mcl<t_b,t_pat_len>::init_slow(const bit_vector* v)
                         m_block[sb_cnt][j] = arg_position[j]; // copy argument positions to longsuperblock
                     }
                 } else { // short block
+                    pos_diff = arg_position[((arg_cnt-1)%SUPER_BLOCK_SIZE)/64*64]-arg_position[0];
                     m_block[sb_cnt] = int_vector<0>(64, 0, bits::hi(pos_diff)+1);
                     for (size_type j=0; j <= (arg_cnt-1)%SUPER_BLOCK_SIZE; j+=64) {
                         m_block[sb_cnt][j/64] = arg_position[j]-arg_position[0];
