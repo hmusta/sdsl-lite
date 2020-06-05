@@ -37,9 +37,10 @@ class uint256_t
         uint128_t m_high;
 
     public:
-        inline uint256_t() : m_lo(0), m_high(0) {}
+        uint256_t() = default;
+        uint256_t(const uint256_t& x) = default;
+        uint256_t& operator=(const uint256_t& x) = default;
 
-        inline uint256_t(const uint256_t& x) : m_lo(x.m_lo), m_high(x.m_high) {}
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
         inline uint256_t(T lo) : m_lo(lo), m_high(0) {}
 
@@ -52,7 +53,6 @@ class uint256_t
             : m_lo((uint128_t(mid) << 64) | lo), m_high(high) {}
 #endif
 
-        inline uint256_t& operator=(const uint256_t& x) { m_lo = x.m_lo; m_high = x.m_high; return *this; }
         template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type >
         inline uint256_t& operator=(T lo) { m_lo = lo; m_high = 0; return *this; }
 
