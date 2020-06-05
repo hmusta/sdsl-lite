@@ -154,7 +154,6 @@ class int_vector_buffer
             }
 
             // Open file for IO
-            assert(file_offset>=0);
             m_start = file_offset;
             m_ofile.open(m_filename, mode|std::ios::out|(m_start ? std::ios::in : std::ios::openmode(0))|std::ios::binary);
             assert(m_ofile.good());
