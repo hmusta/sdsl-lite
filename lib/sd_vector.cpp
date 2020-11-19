@@ -36,8 +36,7 @@ sd_vector_builder::sd_vector_builder(size_type n, size_type m) :
     m_high = bit_vector(m_capacity + (1ULL << logm), 0);
 }
 
-void
-sd_vector_builder::swap(sd_vector_builder& sdb)
+void sd_vector_builder::swap(sd_vector_builder& sdb)
 {
     std::swap(m_size, sdb.m_size);
     std::swap(m_capacity, sdb.m_capacity);
@@ -48,24 +47,6 @@ sd_vector_builder::swap(sd_vector_builder& sdb)
     std::swap(m_highpos, sdb.m_highpos);
     m_low.swap(sdb.m_low);
     m_high.swap(sdb.m_high);
-}
-
-template<>
-sd_vector<>::sd_vector(sd_vector_builder& builder)
-{
-    if(builder.items() != builder.capacity())
-    {
-      throw std::runtime_error("sd_vector: the builder is not full.");
-    }
-
-    m_size = builder.m_size;
-    m_wl = builder.m_wl;
-    m_low.swap(builder.m_low);
-    m_high.swap(builder.m_high);
-    util::init_support(m_high_1_select, &m_high);
-    util::init_support(m_high_0_select, &m_high);
-
-    builder = sd_vector_builder();
 }
 
 } // end namespace

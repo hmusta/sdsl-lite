@@ -23,6 +23,8 @@
 #ifndef INCLUDED_SDSL_SD_VECTOR
 #define INCLUDED_SDSL_SD_VECTOR
 
+#include <type_traits>
+
 #include "int_vector.hpp"
 #include "select_support_mcl.hpp"
 #include "util.hpp"
@@ -267,16 +269,22 @@ class sd_vector
 
         sd_vector(sd_vector_builder& builder)
         {
-            if (builder.items() != builder.capacity()) {
-                throw std::runtime_error("sd_vector: builder is not at full capacity.");
+            if (builder.items() < builder.capacity()) {
+                throw std::runtime_error("sd_vector: the builder is not full.");
+            } else if (builder.items() > builder.capacity()) {
+                throw std::runtime_error("sd_vector: builder overflow.");
             }
 
             m_size = builder.m_size;
             m_wl = builder.m_wl;
             m_low.swap(builder.m_low);
-            util::assign(m_high, builder.m_high);
-            util::init_support(m_high_1_select, &(this->m_high));
-            util::init_support(m_high_0_select, &(this->m_high));
+            if constexpr(std::is_same<hi_bit_vector_type, bit_vector>::value) {
+                m_high.swap(builder.m_high);
+            } else {
+                util::assign(m_high, builder.m_high);
+            }
+            util::init_support(m_high_1_select, &m_high);
+            util::init_support(m_high_0_select, &m_high);
 
             builder = sd_vector_builder();
         }
@@ -436,9 +444,6 @@ class sd_vector
             return iterator(this, size());
         }
 };
-
-//! Specialized constructor that is a bit more space-efficient than the default.
-template<> sd_vector<>::sd_vector(sd_vector_builder& builder);
 
 template<uint8_t t_b>
 struct rank_support_sd_trait {
