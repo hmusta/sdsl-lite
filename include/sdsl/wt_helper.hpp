@@ -144,10 +144,10 @@ struct _byte_tree {
 
 
     std::vector<data_node> m_nodes;              // nodes for the prefix code tree structure
-    node_type          m_c_to_leaf[fixed_sigma]; // map symbol c to a leaf in the tree structure
+    node_type          m_c_to_leaf[fixed_sigma] = {undef}; // map symbol c to a leaf in the tree structure
     // if m_c_to_leaf[c] == undef the char does
     // not exists in the text
-    uint64_t           m_path[fixed_sigma];      // path information for each char; the bits at position
+    uint64_t           m_path[fixed_sigma] = {0};      // path information for each char; the bits at position
     // 0..55 hold path information; bits 56..63 the length
     // of the path in binary representation
 
