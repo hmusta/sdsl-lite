@@ -1558,7 +1558,7 @@ typename int_vector<t_width>::size_type int_vector<t_width>::serialize(std::ostr
 template<uint8_t t_width>
 void int_vector<t_width>::load(std::istream& in)
 {
-    size_type size;
+    size_type size = 0;
     int_vector<t_width>::read_header(size, m_width, in);
 
     bit_resize(size);
