@@ -180,10 +180,10 @@ class int_vector_buffer
 
         //! Move constructor.
         int_vector_buffer(int_vector_buffer&& ivb) :
+            m_start(ivb.m_start),
             m_filename(std::move(ivb.m_filename)),
             m_buffer(std::move(ivb.m_buffer)),
             m_need_to_write(ivb.m_need_to_write),
-            m_start(ivb.m_start),
             m_offset(ivb.m_offset),
             m_buffersize(ivb.m_buffersize),
             m_size(ivb.m_size),
