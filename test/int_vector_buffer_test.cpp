@@ -335,19 +335,6 @@ void test_random_access(size_type width=1)
             ASSERT_EQ(i & sdsl::bits::lo_set[ivb.width()], (size_type)ivb[i]);
         }
     }
-    // Test random access with different buffersize
-    buffersize = 50;
-    ivb.buffersize(buffersize);
-    ASSERT_EQ((size_type)1000, ivb.size());
-    for (size_type i=0; i < 1000; ++i) {
-        value_type x = dice();
-        ivb[x] = x & sdsl::bits::lo_set[ivb.width()];
-    }
-    for (size_type i=0; i < ivb.size(); ++i) {
-        if (ivb[i]) {
-            ASSERT_EQ(i & sdsl::bits::lo_set[ivb.width()], (size_type)ivb[i]);
-        }
-    }
     // Test random access read
     for (size_type i=0; i < ivb.size(); ++i) {
         value_type idx = dice();

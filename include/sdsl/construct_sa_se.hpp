@@ -329,7 +329,6 @@ void _construct_sa_se(int_vector_type& text, std::string filename_sa, uint64_t s
             bkt_s[i] = bkt_lms[i];
         }
     }
-    right.buffersize(0);
     right.reset();
     right_pointer = 0;
     --left_pointer;
@@ -434,7 +433,6 @@ void _construct_sa_se(int_vector_type& text, std::string filename_sa, uint64_t s
         }
     }
     util::clear(same_lms);
-    left.buffersize(0);
     left.reset();
 
     // Step 8 - Determine complete LMS order (recursivly)
@@ -484,7 +482,6 @@ void _construct_sa_se(int_vector_type& text, std::string filename_sa, uint64_t s
         util::clear(lms_pos_b);
         util::clear(isa_rec);
         // write to left
-        left.buffersize(buffersize);
         left_pointer = 0;
         for (; left_pointer<number_of_lms_strings; ++left_pointer) {
             left[left_pointer] = tmp_left[number_of_lms_strings-left_pointer-1];
@@ -492,7 +489,6 @@ void _construct_sa_se(int_vector_type& text, std::string filename_sa, uint64_t s
         left_pointer--;
         util::clear(tmp_left);
     } else {
-        left.buffersize(buffersize);
         left_pointer = 0;
         {
             // load bit_vector lms_positions and create select support
@@ -519,7 +515,6 @@ void _construct_sa_se(int_vector_type& text, std::string filename_sa, uint64_t s
     sdsl::remove(filename_text);
 
     // Step 12 - Scan virtual array from left to right second time
-    right.buffersize(buffersize);
     right_pointer = 0;
     int_vector_buffer<> cached_sa(filename_sa, std::ios::out, buffersize, nsize);
     size_t sa_pointer = 0;

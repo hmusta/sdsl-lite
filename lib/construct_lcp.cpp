@@ -14,7 +14,8 @@ namespace sdsl
 void construct_lcp_semi_extern_PHI(cache_config& config)
 {
     typedef int_vector<>::size_type size_type;
-    int_vector_buffer<> sa_buf(cache_file_name(conf::KEY_SA, config));
+    size_type buffer_size = 4000000; // buffer_size is a multiple of 8!
+    int_vector_buffer<> sa_buf(cache_file_name(conf::KEY_SA, config), std::ios::in, buffer_size);
     size_type n = sa_buf.size();
     if (1==n) {
         int_vector<> lcp(1, 0);
@@ -57,8 +58,6 @@ void construct_lcp_semi_extern_PHI(cache_config& config)
         }
     }
 
-    size_type buffer_size = 4000000; // buffer_size is a multiple of 8!
-    sa_buf.buffersize(buffer_size);
     int_vector_buffer<> lcp_out_buf(cache_file_name(conf::KEY_LCP, config), std::ios::out, buffer_size, sa_buf.width());	// open buffer for plcp
 
     for (size_type i=0, sai_1=0,l=0, sai=0,iq=0; i < n; ++i) {

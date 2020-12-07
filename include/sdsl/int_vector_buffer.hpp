@@ -141,7 +141,7 @@ class int_vector_buffer
          *                    If true the file will be interpreted as plain array with t_width bits per integer.
          *                    In second case (is_plain==true), t_width must be 8, 16, 32 or 64.
          */
-        int_vector_buffer(const std::string filename, std::ios::openmode mode=std::ios::in, const uint64_t buffer_size=1024*1024, const uint8_t int_width=t_width, const bool is_plain=false, const uint64_t file_offset=0)
+        int_vector_buffer(const std::string filename, std::ios::openmode mode=std::ios::in, uint64_t buffer_size=1024*1024, const uint8_t int_width=t_width, const bool is_plain=false, const uint64_t file_offset=0)
         {
             m_filename = filename;
             assert(!(mode&std::ios::app));
@@ -177,7 +177,12 @@ class int_vector_buffer
                 assert(m_ifile->good());
                 m_size = size/width();
             }
-            buffersize(buffer_size);
+
+            if (buffer_size < 8u)
+                buffer_size = 8; // at least 8 bytes
+            m_buffersize = ((buffer_size*8+width()-1)/width()+7)/8*8;
+            m_buffer = int_vector<t_width>(m_buffersize, 0, width());
+            read_block(0);
         }
 
         //! Move constructor.
@@ -222,22 +227,6 @@ class int_vector_buffer
         {
             assert(m_buffersize*width()%8==0);
             return (m_buffersize*width())/8;
-        }
-
-        //! Set the buffersize in bytes
-        void buffersize(uint64_t buffersize)
-        {
-            if (0ULL == buffersize)
-                buffersize = 8;
-            write_block();
-            if (0==(buffersize*8)%width()) {
-                m_buffersize = buffersize*8/width(); // m_buffersize might not be multiple of 8, but m_buffersize*width() is.
-            } else {
-                uint64_t element_buffersize = (buffersize*8)/width()+1; // one more element than fits into given buffersize in byte
-                m_buffersize = element_buffersize+7 - (element_buffersize+7)%8; // take next multiple of 8
-            }
-            m_buffer = int_vector<t_width>(m_buffersize, 0, width());
-            if (0!=m_buffersize) read_block(0);
         }
 
         //! Returns whether state of underlying streams are good

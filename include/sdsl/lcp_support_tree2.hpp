@@ -85,9 +85,10 @@ class _lcp_support_tree2
         {
             m_cst = cst;
 
-            int_vector_buffer<> lcp_buf(cache_file_name(conf::KEY_LCP, config));
+            size_type buf_len = 1000000;
+            int_vector_buffer<> lcp_buf(cache_file_name(conf::KEY_LCP, config), std::ios::in, buf_len);
             std::string bwt_file = cache_file_name(key_trait<t_cst::csa_type::alphabet_type::int_width>::KEY_BWT, config);
-            int_vector_buffer<t_cst::csa_type::alphabet_type::int_width> bwt_buf(bwt_file);
+            int_vector_buffer<t_cst::csa_type::alphabet_type::int_width> bwt_buf(bwt_file, std::ios::in, buf_len);
 
             std::string sml_lcp_file = tmp_file(config, "_fc_lf_lcp_sml");
             std::string big_lcp_file = tmp_file(config, "_fc_lf_lcp_big");
@@ -206,9 +207,6 @@ void construct_first_child_and_lf_lcp(int_vector_buffer<>& lcp_buf,
 {
     typedef int_vector<>::size_type size_type;
     const size_type M = 255;	// limit for values represented in the small LCP part
-    size_type buf_len = 1000000;
-    lcp_buf.buffersize(buf_len);
-    bwt_buf.buffersize(buf_len);
     size_type n = lcp_buf.size();
 
     osfstream sml_lcp_out(small_lcp_file, std::ios::out | std::ios::trunc | std::ios::binary);

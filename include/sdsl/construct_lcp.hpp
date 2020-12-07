@@ -169,10 +169,8 @@ void construct_lcp_PHI(cache_config& config)
 
 //	(4) Transform PLCP into LCP
     std::string lcp_file = cache_file_name(conf::KEY_LCP, config);
-    size_type buffer_size = 1000000; // buffer_size is a multiple of 8!
-    int_vector_buffer<> lcp_buf(lcp_file, std::ios::out, buffer_size, lcp_width);   // open buffer for lcp
+    int_vector_buffer<> lcp_buf(lcp_file, std::ios::out, 1024*1024, lcp_width);   // open buffer for lcp
     lcp_buf[0] = 0;
-    sa_buf.buffersize(buffer_size);
     for (size_type i=1; i < n; ++i) {
         size_type sai = sa_buf[i];
         lcp_buf[i] = plcp[sai];
