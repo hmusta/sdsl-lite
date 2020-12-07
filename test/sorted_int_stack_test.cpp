@@ -1,4 +1,5 @@
 #include "sdsl/sorted_int_stack.hpp"
+#include "sdsl/ram_fs.hpp"
 #include "sdsl/util.hpp"
 #include "gtest/gtest.h"
 #include <string>

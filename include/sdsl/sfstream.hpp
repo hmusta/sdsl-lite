@@ -8,8 +8,6 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "sdsl/ram_fs.hpp"
-#include "sdsl/ram_filebuf.hpp"
 
 namespace sdsl
 {

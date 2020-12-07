@@ -22,6 +22,7 @@
 #define INCLUDED_SDSL_IO
 
 #include "util.hpp"
+#include "sfstream.hpp"
 #include "sdsl_concepts.hpp"
 #include "structure_tree.hpp"
 #include <algorithm>

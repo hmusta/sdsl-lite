@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <chrono>
 #include <cstddef>
+#include <fstream>
 #include <stack>
 #include <vector>
 #include "config.hpp"

@@ -1,5 +1,7 @@
 #include "sdsl/sfstream.hpp"
 #include "sdsl/util.hpp"
+#include "sdsl/ram_fs.hpp"
+#include "sdsl/ram_filebuf.hpp"
 #include <iostream>
 
 namespace sdsl

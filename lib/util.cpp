@@ -16,6 +16,7 @@
 */
 
 #include "sdsl/util.hpp"
+#include "sdsl/ram_fs.hpp"
 
 #include <sys/types.h> // for file_size
 #include <sys/stat.h>  // for file_size
