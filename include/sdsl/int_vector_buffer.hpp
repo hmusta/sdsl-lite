@@ -81,6 +81,7 @@ class int_vector_buffer
         void write_block()
         {
             if (m_need_to_write) {
+                assert(m_ofile->is_open());
                 m_ofile->seekp(m_offset+(m_begin*width())/8);
                 assert(m_ofile->good());
                 if (m_begin+m_buffersize >= m_size) {
@@ -155,8 +156,10 @@ class int_vector_buffer
 
             // Open file for IO
             m_start = file_offset;
-            m_ofile->open(m_filename, mode|std::ios::out|(m_start ? std::ios::in : std::ios::openmode(0))|std::ios::binary);
-            assert(m_ofile->good());
+            if (mode & std::ios::out) {
+                m_ofile->open(m_filename, mode|(m_start ? std::ios::in : std::ios::openmode(0))|std::ios::binary);
+                assert(m_ofile->good());
+            }
             m_ifile->open(m_filename, std::ios::in|std::ios::binary);
             assert(m_ifile->good());
             m_ifile->seekg(m_start);
@@ -240,13 +243,13 @@ class int_vector_buffer
         //! Returns whether state of underlying streams are good
         bool good()
         {
-            return m_ifile->good() and m_ofile->good();
+            return m_ifile->good() and (!m_ofile->is_open() || m_ofile->good());
         }
 
         //! Returns whether underlying streams are currently associated to a file
         bool is_open()
         {
-            return m_ifile->is_open() and m_ofile->is_open();
+            return m_ifile->is_open();
         }
 
         //! Delete all content and set size to 0
@@ -258,7 +261,6 @@ class int_vector_buffer
             m_ifile->close();
             m_ofile->close();
             m_ofile->open(m_filename, std::ios::out|std::ios::binary);
-            assert(m_ofile->good());
             m_ifile->open(m_filename, std::ios::in|std::ios::binary);
             assert(m_ifile->good());
             assert(m_ofile->good());
@@ -297,7 +299,7 @@ class int_vector_buffer
         void close(bool remove_file=false)
         {
             if (is_open()) {
-                if (!remove_file) {
+                if (!remove_file && m_ofile->is_open()) {
                     write_block();
                     if (m_start < m_offset) { // in case of int_vector, write header and trailing zeros
                         uint64_t size = m_size*width();
@@ -315,8 +317,10 @@ class int_vector_buffer
                 }
                 m_ifile->close();
                 assert(m_ifile->good());
-                m_ofile->close();
-                assert(m_ofile->good());
+                if (m_ofile->is_open()) {
+                    m_ofile->close();
+                    assert(m_ofile->good());
+                }
                 if (remove_file) {
                     sdsl::remove(m_filename);
                 }
