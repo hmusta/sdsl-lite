@@ -38,7 +38,9 @@ bool contains_no_zero_symbol(const int_vector& text, const std::string& file)
 {
     for (int_vector_size_type i=0; i < text.size(); ++i) {
         if ((uint64_t)0 == text[i]) {
-            throw std::logic_error(std::string("Error: File \"")+file+"\" contains zero symbol.");
+            throw std::logic_error("Error: File \""+file+"\" if size "
+                                   +std::to_string(text.size())
+                                   +" contains zero symbol at position "+std::to_string(i)+".");
             return false;
         }
     }
