@@ -48,6 +48,8 @@ class int_vector_buffer
         std::unique_ptr<sdsl::isfstream>     m_ifile { new sdsl::isfstream() };
         std::unique_ptr<sdsl::osfstream>     m_ofile { new sdsl::osfstream() };
         std::streampos      m_start;
+        std::streampos      m_ifile_pos;    // current byte position in m_ifile
+        std::streampos      m_ofile_pos;    // current byte position in m_ofile
         std::string         m_filename;
         int_vector<t_width> m_buffer;
         bool                m_need_to_write = false;
@@ -64,11 +66,15 @@ class int_vector_buffer
             if (m_begin >= m_size) {
                 util::set_to_value(m_buffer, 0);
             } else {
-                m_ifile->seekg(m_offset+(m_begin*width())/8);
-                if (!m_ifile->good())
-                    throw std::ios_base::failure("Error when seeking in int_vector_buffer");
+                if (m_ifile_pos != m_offset+(m_begin*width())/8) {
+                    m_ifile->seekg(m_offset+(m_begin*width())/8);
+                    m_ifile_pos = m_offset+(m_begin*width())/8;
+                    if (!m_ifile->good())
+                        throw std::ios_base::failure("Error when seeking in int_vector_buffer");
+                }
                 uint64_t wb = std::min(m_buffersize*width(), (m_size-m_begin)*width()+7)/8;
                 m_ifile->read(reinterpret_cast<char*>(m_buffer.data()), wb);
+                m_ifile_pos += wb;
                 if (!m_ifile->good())
                     throw std::ios_base::failure("Error when reading block in int_vector_buffer");
                 for (uint64_t i=m_size-m_begin; i<m_buffersize; ++i) {
@@ -82,11 +88,15 @@ class int_vector_buffer
         {
             if (m_need_to_write) {
                 assert(m_ofile->is_open());
-                m_ofile->seekp(m_offset+(m_begin*width())/8);
-                if (!m_ofile->good())
-                    throw std::ios_base::failure("Error when seeking in int_vector_buffer");
+                if (m_ofile_pos != m_offset+(m_begin*width())/8) {
+                    m_ofile->seekp(m_offset+(m_begin*width())/8);
+                    m_ofile_pos = m_offset+(m_begin*width())/8;
+                    if (!m_ofile->good())
+                        throw std::ios_base::failure("Error when seeking in int_vector_buffer");
+                }
                 uint64_t wb = std::min(m_buffersize*width(), (m_size-m_begin)*width()+7)/8;
                 m_ofile->write(reinterpret_cast<char*>(m_buffer.data()), wb);
+                m_ofile_pos += wb;
                 m_ofile->flush();
                 if (!m_ofile->good())
                     throw std::ios_base::failure("Error when writing block in int_vector_buffer");
@@ -143,6 +153,7 @@ class int_vector_buffer
             m_filename = filename;
             assert(!(mode&std::ios::app));
             mode &= ~std::ios::app;
+            mode &= ~std::ios::ate;
             m_buffer.width(int_width);
             if (is_plain) {
                 // is_plain is only allowed with width() in {8, 16, 32, 64}
@@ -153,10 +164,12 @@ class int_vector_buffer
 
             // Open file for IO
             m_start = file_offset;
+            m_offset += file_offset;
             if (mode & std::ios::out) {
                 m_ofile->open(m_filename, mode|(m_start ? std::ios::in : std::ios::openmode(0))|std::ios::binary);
                 if (!m_ofile->good())
                     throw std::ios_base::failure("int_vector_buffer error: Could not open file for write " + m_filename);
+                m_ofile_pos = 0;
             }
 
             m_ifile->open(m_filename, std::ios::in|std::ios::binary);
@@ -165,7 +178,6 @@ class int_vector_buffer
             m_ifile->seekg(m_start);
             if (!m_ifile->good())
                 throw std::ios_base::failure("int_vector_buffer error: Seek failed for " + m_filename);
-            m_offset += m_start;
 
             if (mode & std::ios::in) {
                 // load size and width
@@ -182,6 +194,8 @@ class int_vector_buffer
                 }
                 m_size = size/width();
             }
+
+            m_ifile_pos = m_ifile->tellg();
 
             if (buffer_size < 8u)
                 buffer_size = 8; // at least 8 bytes
@@ -269,7 +283,8 @@ class int_vector_buffer
             m_size = 0;
             m_offset -= m_start;
             m_start = 0;
-
+            m_ifile_pos = 0;
+            m_ofile_pos = 0;
             // reset buffer
             read_block(0);
         }
@@ -361,6 +376,8 @@ class int_vector_buffer
                 std::swap(m_buffersize, ivb.m_buffersize);
                 std::swap(m_size, ivb.m_size);
                 std::swap(m_begin, ivb.m_begin);
+                std::swap(m_ifile_pos, ivb.m_ifile_pos);
+                std::swap(m_ofile_pos, ivb.m_ofile_pos);
             }
         }
 
