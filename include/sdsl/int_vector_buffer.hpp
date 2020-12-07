@@ -382,14 +382,14 @@ class int_vector_buffer
                 }
 
                 //! Assignment operator for write operations
-                reference& operator=(const uint64_t& val)
+                reference& operator=(uint64_t val)
                 {
                     m_int_vector_buffer->write(m_idx, val);
                     return *this;
                 }
 
                 //! Assignment operator
-                reference& operator=(reference& x)
+                reference& operator=(const reference& x)
                 {
                     return *this = static_cast<uint64_t>(x);
                 }
@@ -405,8 +405,8 @@ class int_vector_buffer
                 //! Postfix increment of the proxy object
                 uint64_t operator++(int)
                 {
-                    uint64_t val = static_cast<uint64_t>(*this);
-                    ++(*this);
+                    uint64_t val = *this;
+                    m_int_vector_buffer->write(m_idx, val+1);
                     return val;
                 }
 
@@ -421,8 +421,8 @@ class int_vector_buffer
                 //! Postfix decrement of the proxy object
                 uint64_t operator--(int)
                 {
-                    uint64_t val = static_cast<uint64_t>(*this);
-                    --(*this);
+                    uint64_t val = *this;
+                    m_int_vector_buffer->write(m_idx, val-1);
                     return val;
                 }
 
