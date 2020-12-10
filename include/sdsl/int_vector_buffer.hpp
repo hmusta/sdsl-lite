@@ -268,6 +268,26 @@ class int_vector_buffer
             return m_ifile->is_open();
         }
 
+        //! Flush data to file
+        void flush()
+        {
+            assert(m_ofile->is_open());
+            write_block();
+            if (m_start < m_offset) { // in case of int_vector, write header and trailing zeros
+                uint64_t size = m_size*width();
+                m_ofile->seekp(m_start, std::ios::beg);
+                int_vector<t_width>::write_header(size, width(), *m_ofile);
+                int64_t wb = (size+7)/8;
+                if (wb%8) {
+                    m_ofile->seekp(m_offset+wb);
+                    m_ofile->write("\0\0\0\0\0\0\0\0", 8-wb%8);
+                }
+            }
+            m_ofile->flush();
+            if (!m_ofile->good())
+                throw std::ios_base::failure("int_vector_buffer error: flush failed");
+        }
+
         //! Delete all content and set size to 0
         void reset()
         {
@@ -317,21 +337,7 @@ class int_vector_buffer
         {
             if (is_open()) {
                 if (!remove_file && m_ofile->is_open()) {
-                    write_block();
-                    if (m_start < m_offset) { // in case of int_vector, write header and trailing zeros
-                        uint64_t size = m_size*width();
-                        m_ofile->seekp(m_start, std::ios::beg);
-                        int_vector<t_width>::write_header(size, width(), *m_ofile);
-                        assert(m_ofile->good());
-                        int64_t wb = (size+7)/8;
-                        if (wb%8) {
-                            m_ofile->seekp(m_offset+wb);
-                            assert(m_ofile->good());
-                            m_ofile->write("\0\0\0\0\0\0\0\0", 8-wb%8);
-                            if (!m_ofile->good())
-                                throw std::ios_base::failure("int_vector_buffer error: write failed");
-                        }
-                    }
+                    flush();
                 }
                 m_ifile->close();
                 if (!m_ifile->good())
