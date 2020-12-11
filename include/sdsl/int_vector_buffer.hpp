@@ -44,7 +44,7 @@ class int_vector_buffer
         static_assert(t_width <= 64 , "int_vector_buffer: width must be at most 64 bits.");
         sdsl::isfstream     m_ifile;
         sdsl::osfstream     m_ofile;
-        uint64_t            m_start;
+        std::streampos      m_start;
         std::string         m_filename;
         int_vector<t_width> m_buffer;
         bool                m_need_to_write = false;
@@ -166,7 +166,7 @@ class int_vector_buffer
                 uint64_t size  = 0;
                 if (is_plain) {
                     m_ifile.seekg(0, std::ios_base::end);
-                    size = m_ifile.tellg()*8;
+                    size = (m_ifile.tellg()-m_start)*8;
                 } else {
                     uint8_t width = 0;
                     int_vector<t_width>::read_header(size, width, m_ifile);
@@ -310,6 +310,9 @@ class int_vector_buffer
             // reset member variables
             m_need_to_write = false;
             m_size = 0;
+            m_offset -= m_start;
+            m_start = 0;
+
             // reset buffer
             read_block(0);
         }
