@@ -73,14 +73,13 @@ class int_vector_buffer
                     if (!m_ifile->good())
                         throw std::ios_base::failure("Error when seeking in int_vector_buffer");
                 }
+                if (m_size-m_begin<m_buffersize)
+                    util::set_to_value(m_buffer, 0);
                 uint64_t wb = std::min(m_buffersize*width(), (m_size-m_begin)*width()+7)/8;
                 m_ifile->read(reinterpret_cast<char*>(m_buffer.data()), wb);
                 m_ifile_pos += wb;
                 if (!m_ifile->good())
                     throw std::ios_base::failure("Error when reading block in int_vector_buffer");
-                for (uint64_t i=m_size-m_begin; i<m_buffersize; ++i) {
-                    m_buffer[i] = 0;
-                }
             }
         }
 
