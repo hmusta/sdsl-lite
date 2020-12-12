@@ -257,13 +257,13 @@ class int_vector_buffer
         }
 
         //! Returns whether state of underlying streams are good
-        bool good()
+        bool good() const
         {
             return m_ifile->good() and (!m_ofile->is_open() || m_ofile->good());
         }
 
         //! Returns whether underlying streams are currently associated to a file
-        bool is_open()
+        bool is_open() const
         {
             return m_ifile->is_open();
         }
