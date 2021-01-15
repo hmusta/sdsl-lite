@@ -83,27 +83,37 @@ osfstream::operator voidptr()const
     return m_streambuf;
 }
 
+#define M_SETSTATE(state) { \
+    try { \
+        this->setstate(this->rdstate() | state); \
+    } catch (...) { \
+    } \
+    if (this->exceptions() & state) { \
+        throw; \
+    } \
+}
+
 osfstream&
 osfstream::seekp(pos_type pos)
 {
-    ios_base::iostate err = std::ios_base::iostate(std::ios_base::goodbit);
+    ios_base::iostate err = ios_base::goodbit;
     try {
         if (!this->fail()) {
             pos_type p = 0;
             if (is_ram_file(m_file)) {
-                p = ((ram_filebuf*)m_streambuf)->pubseekpos(pos, std::ios_base::out);
+                p = ((ram_filebuf*)m_streambuf)->pubseekpos(pos, ios_base::out);
             } else {
-                p = ((std::filebuf*)m_streambuf)->pubseekpos(pos, std::ios_base::out);
+                p = ((std::filebuf*)m_streambuf)->pubseekpos(pos, ios_base::out);
             }
             if (p == pos_type(off_type(-1))) {
                 err |= ios_base::failbit;
-                this->setstate(err);
             }
         }
     } catch (...) {
-        if (err) {
-            this->setstate(err);
-        }
+        M_SETSTATE(ios_base::badbit);
+    }
+    if (err) {
+        this->setstate(err);
     }
     return *this;
 }
@@ -112,25 +122,24 @@ osfstream::seekp(pos_type pos)
 osfstream&
 osfstream::seekp(off_type off, std::ios_base::seekdir way)
 {
-    ios_base::iostate err = std::ios_base::iostate(ios_base::goodbit);
+    ios_base::iostate err = ios_base::goodbit;
     try {
         if (!this->fail()) {
             pos_type p = 0;
             if (is_ram_file(m_file)) {
-                p = ((ram_filebuf*)m_streambuf)->pubseekoff(off, way, std::ios_base::out);
-
+                p = ((ram_filebuf*)m_streambuf)->pubseekoff(off, way, ios_base::out);
             } else {
-                p = ((std::filebuf*)m_streambuf)->pubseekoff(off, way, std::ios_base::out);
+                p = ((std::filebuf*)m_streambuf)->pubseekoff(off, way, ios_base::out);
             }
             if (p == pos_type(off_type(-1))) {
                 err |= ios_base::failbit;
-                this->setstate(err);
             }
         }
     } catch (...) {
-        if (err) {
-            this->setstate(err);
-        }
+        M_SETSTATE(ios_base::badbit);
+    }
+    if (err) {
+        this->setstate(err);
     }
     return *this;
 }
@@ -206,24 +215,25 @@ isfstream::close()
 isfstream&
 isfstream::seekg(pos_type pos)
 {
-    ios_base::iostate err = std::ios_base::iostate(std::ios_base::goodbit);
+    this->clear(this->rdstate() & ~ios_base::eofbit);
+    ios_base::iostate err = ios_base::goodbit;
     try {
         if (!this->fail()) {
             pos_type p = 0;
             if (is_ram_file(m_file)) {
-                p = ((ram_filebuf*)m_streambuf)->pubseekpos(pos, std::ios_base::in);
-
+                p = ((ram_filebuf*)m_streambuf)->pubseekpos(pos, ios_base::in);
             } else {
-                p = ((std::filebuf*)m_streambuf)->pubseekpos(pos, std::ios_base::in);
+                p = ((std::filebuf*)m_streambuf)->pubseekpos(pos, ios_base::in);
             }
             if (p == pos_type(off_type(-1))) {
                 err |= ios_base::failbit;
             }
         }
     } catch (...) {
-        if (err) {
-            this->setstate(err);
-        }
+        M_SETSTATE(ios_base::badbit);
+    }
+    if (err) {
+        this->setstate(err);
     }
     return *this;
 }
@@ -232,24 +242,25 @@ isfstream::seekg(pos_type pos)
 isfstream&
 isfstream::seekg(off_type off, std::ios_base::seekdir way)
 {
-    ios_base::iostate err = std::ios_base::iostate(ios_base::goodbit);
+    this->clear(this->rdstate() & ~ios_base::eofbit);
+    ios_base::iostate err = ios_base::goodbit;
     try {
         if (!this->fail()) {
             pos_type p = 0;
             if (is_ram_file(m_file)) {
-                p = ((ram_filebuf*)m_streambuf)->pubseekoff(off, way, std::ios_base::in);
-
+                p = ((ram_filebuf*)m_streambuf)->pubseekoff(off, way, ios_base::in);
             } else {
-                p = ((std::filebuf*)m_streambuf)->pubseekoff(off, way, std::ios_base::in);
+                p = ((std::filebuf*)m_streambuf)->pubseekoff(off, way, ios_base::in);
             }
             if (p == pos_type(off_type(-1))) {
                 err |= ios_base::failbit;
             }
         }
     } catch (...) {
-        if (err) {
-            this->setstate(err);
-        }
+        M_SETSTATE(ios_base::badbit);
+    }
+    if (err) {
+        this->setstate(err);
     }
     return *this;
 }
@@ -257,24 +268,18 @@ isfstream::seekg(off_type off, std::ios_base::seekdir way)
 std::streampos
 isfstream::tellg()
 {
-    ios_base::iostate err = std::ios_base::iostate(ios_base::goodbit);
+    ios_base::iostate __state = ios_base::goodbit;
     pos_type p = pos_type(off_type(-1));
     try {
         if (!this->fail()) {
             if (is_ram_file(m_file)) {
-                p = ((ram_filebuf*)m_streambuf)->pubseekoff(0, std::ios_base::cur);
-
+                p = ((ram_filebuf*)m_streambuf)->pubseekoff(0, std::ios_base::cur, ios_base::in);
             } else {
-                p = ((std::filebuf*)m_streambuf)->pubseekoff(0, std::ios_base::cur);
-            }
-            if (p == pos_type(off_type(-1))) {
-                err |= ios_base::failbit;
+                p = ((std::filebuf*)m_streambuf)->pubseekoff(0, std::ios_base::cur, ios_base::in);
             }
         }
     } catch (...) {
-        if (err) {
-            this->setstate(err);
-        }
+        M_SETSTATE(ios_base::badbit);
     }
     return p;
 }
