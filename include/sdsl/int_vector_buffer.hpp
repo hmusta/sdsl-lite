@@ -59,6 +59,10 @@ class int_vector_buffer
         uint64_t            m_size       = 0;    // size of int_vector_buffer
         uint64_t            m_begin      = 0;    // number in elements
 
+        void throw_error(const std::string &message) const {
+            throw std::ios_base::failure("int_vector_buffer " + m_filename + " error: " + message);
+        }
+
         //! Read block containing element at index idx.
         void read_block(const uint64_t idx)
         {
@@ -71,7 +75,7 @@ class int_vector_buffer
                     m_ifile->seekg(pos);
                     m_ifile_pos = pos;
                     if (!m_ifile->good())
-                        throw std::ios_base::failure("Error when seeking in int_vector_buffer");
+                        throw_error("seekg error");
                 }
                 if (m_size-m_begin<m_buffersize)
                     util::set_to_value(m_buffer, 0);
@@ -79,7 +83,7 @@ class int_vector_buffer
                 m_ifile->read(reinterpret_cast<char*>(m_buffer.data()), wb);
                 m_ifile_pos += wb;
                 if (!m_ifile->good())
-                    throw std::ios_base::failure("Error when reading block in int_vector_buffer");
+                    throw_error("read block error");
             }
         }
 
@@ -93,14 +97,14 @@ class int_vector_buffer
                     m_ofile->seekp(pos);
                     m_ofile_pos = pos;
                     if (!m_ofile->good())
-                        throw std::ios_base::failure("Error when seeking in int_vector_buffer");
+                        throw_error("seekp error");
                 }
                 uint64_t wb = std::min(m_buffersize*width(), (m_size-m_begin)*width()+7)/8;
                 m_ofile->write(reinterpret_cast<char*>(m_buffer.data()), wb);
                 m_ofile_pos += wb;
                 m_ofile->flush();
                 if (!m_ofile->good())
-                    throw std::ios_base::failure("Error when writing block in int_vector_buffer");
+                    throw_error("write block error");
                 m_need_to_write = false;
             }
         }
@@ -169,16 +173,16 @@ class int_vector_buffer
             if (mode & std::ios::out) {
                 m_ofile->open(m_filename, mode|(m_start ? std::ios::in : std::ios::openmode(0))|std::ios::binary);
                 if (!m_ofile->good())
-                    throw std::ios_base::failure("int_vector_buffer error: Could not open file for write " + m_filename);
+                    throw_error("Could not open file for write");
                 m_ofile_pos = 0;
             }
 
             m_ifile->open(m_filename, std::ios::in|std::ios::binary);
             if (!m_ifile->good())
-                throw std::ios_base::failure("int_vector_buffer error: Could not open file for read " + m_filename);
+                throw_error("Could not open file for read");
             m_ifile->seekg(m_start);
             if (!m_ifile->good())
-                throw std::ios_base::failure("int_vector_buffer error: Seek failed for " + m_filename);
+                throw_error("seekg failed");
 
             if (mode & std::ios::in) {
                 // load size and width
@@ -190,7 +194,7 @@ class int_vector_buffer
                     uint8_t width = 0;
                     int_vector<t_width>::read_header(size, width, *m_ifile);
                     if (!m_ifile->good())
-                        throw std::ios_base::failure("int_vector_buffer error: Could not read header in " + m_filename);
+                        throw_error("Could not read header");
                     m_buffer.width(width);
                 }
                 m_size = size/width();
@@ -284,7 +288,7 @@ class int_vector_buffer
             }
             m_ofile->flush();
             if (!m_ofile->good())
-                throw std::ios_base::failure("int_vector_buffer error: flush failed");
+                throw_error("flush failed");
         }
 
         //! Delete all content and set size to 0
@@ -340,11 +344,11 @@ class int_vector_buffer
                 }
                 m_ifile->close();
                 if (!m_ifile->good())
-                    throw std::ios_base::failure("int_vector_buffer error: Could not close read stream " + m_filename);
+                    throw_error("Could not close read stream");
                 if (m_ofile->is_open()) {
                     m_ofile->close();
                     if (!m_ofile->good())
-                        throw std::ios_base::failure("int_vector_buffer error: Could not close write stream " + m_filename);
+                        throw_error("Could not close write stream");
                 }
                 if (remove_file) {
                     sdsl::remove(m_filename);
