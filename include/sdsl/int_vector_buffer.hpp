@@ -101,10 +101,12 @@ class int_vector_buffer
                 }
                 uint64_t wb = std::min(m_buffersize*width(), (m_size-m_begin)*width()+7)/8;
                 m_ofile->write(reinterpret_cast<char*>(m_buffer.data()), wb);
+                if (!m_ofile->good())
+                    throw_error("write block error");
                 m_ofile_pos += wb;
                 m_ofile->flush();
                 if (!m_ofile->good())
-                    throw_error("write block error");
+                    throw_error("flush block error");
                 m_need_to_write = false;
             }
         }
