@@ -429,7 +429,12 @@ class sd_vector
             read_member(m_size, in);
             read_member(m_wl, in);
             m_low.load(in);
+            // TODO: add more checks for consistency?
+            if (m_low.width() != m_wl)
+                throw std::istream::failure("sd_vector loading error");
             m_high.load(in);
+            if (m_high.size() != m_low.size() + (1ULL<<(bits::hi(m_low.size())+1)))
+                throw std::istream::failure("sd_vector loading error");
             m_high_1_select.load(in, &m_high);
             m_high_0_select.load(in, &m_high);
         }

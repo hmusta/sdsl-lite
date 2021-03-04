@@ -427,6 +427,11 @@ class rrr_vector
         {
             read_member(m_size, in);
             m_bt.load(in);
+            // TODO: add more checks for consistency?
+            if (m_bt.size() != (m_size+t_bs)/((size_type)t_bs))
+                throw std::istream::failure("rrr_vector loading error");
+            if (m_bt.width() != bits::hi(t_bs)+1)
+                throw std::istream::failure("rrr_vector loading error");
             m_btnr.load(in);
             m_btnrp.load(in);
             m_rank.load(in);
