@@ -251,7 +251,6 @@ void select_support_mcl<t_b,t_pat_len>::init_slow(const bit_vector* v)
     }
 }
 
-// TODO: find bug, detected by valgrind
 template<uint8_t t_b, uint8_t t_pat_len>
 void select_support_mcl<t_b,t_pat_len>::init_fast(const bit_vector* v)
 {
@@ -279,6 +278,7 @@ void select_support_mcl<t_b,t_pat_len>::init_fast(const bit_vector* v)
     size_type last_k64 = 1, sb_cnt=0;
     for (size_type i=0, cnt_old=0, cnt_new=0, last_k64_sum=1; i < v->capacity(); i+=64, ++data) {
         cnt_new += select_support_trait<t_b, t_pat_len>::args_in_the_word(*data, carry_new);
+        cnt_new = std::min(cnt_new, m_arg_cnt);
         if (cnt_new >= last_k64_sum) {
             arg_position[(last_k64-1)/64] = i + select_support_trait<t_b, t_pat_len>::ith_arg_pos_in_the_word(*data, last_k64_sum  - cnt_old, carry_new);
             last_k64 += 64;
