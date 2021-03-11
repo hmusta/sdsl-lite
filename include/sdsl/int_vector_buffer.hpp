@@ -80,6 +80,10 @@ class int_vector_buffer
                 if (m_size-m_begin<m_buffersize)
                     util::set_to_value(m_buffer, 0);
                 uint64_t wb = std::min(m_buffersize*width(), (m_size-m_begin)*width()+7)/8;
+                if (wb > m_buffer.bit_size() / 8) {
+                    std::cout << "WRITE TO BUFFER: OUT OF BOUNDS" << std::endl;
+                    exit(1);
+                }
                 m_ifile->read(reinterpret_cast<char*>(m_buffer.data()), wb);
                 m_ifile_pos += wb;
                 if (!m_ifile->good())
@@ -100,7 +104,11 @@ class int_vector_buffer
                         throw_error("seekp error");
                 }
                 uint64_t wb = std::min(m_buffersize*width(), (m_size-m_begin)*width()+7)/8;
-                m_ofile->write(reinterpret_cast<char*>(m_buffer.data()), wb);
+                if (wb > m_buffer.bit_size() / 8) {
+                    std::cout << "READ FROM BUFFER: OUT OF BOUNDS" << std::endl;
+                    exit(1);
+                }
+                m_ofile->write(reinterpret_cast<const char*>(m_buffer.data()), wb);
                 if (!m_ofile->good())
                     throw_error("write block error");
                 m_ofile_pos += wb;
