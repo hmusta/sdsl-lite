@@ -174,7 +174,7 @@ class int_vector_buffer
             m_offset += file_offset;
             if (mode & std::ios::out) {
                 m_ofile->open(m_filename, mode|(m_start ? std::ios::in : std::ios::openmode(0))|std::ios::binary);
-                if (!m_ofile->good())
+                if (!m_ofile->is_open())
                     throw_error("Could not open file for write");
                 m_ofile_pos = 0;
             }
@@ -302,9 +302,11 @@ class int_vector_buffer
             m_ifile->close();
             m_ofile->close();
             m_ofile->open(m_filename, std::ios::out|std::ios::binary);
+            if (!m_ofile->is_open())
+                throw_error("Could not open file for write after reset");
             m_ifile->open(m_filename, std::ios::in|std::ios::binary);
-            assert(m_ifile->good());
-            assert(m_ofile->good());
+            if (!m_ifile->is_open())
+                throw_error("Could not open file for read after reset");
             // reset member variables
             m_need_to_write = false;
             m_size = 0;
@@ -341,17 +343,16 @@ class int_vector_buffer
         void close(bool remove_file=false)
         {
             if (is_open()) {
-                if (!remove_file && m_ofile->is_open()) {
-                    flush();
-                }
-                m_ifile->close();
-                if (!m_ifile->good())
-                    throw_error("Could not close read stream");
                 if (m_ofile->is_open()) {
+                    if (!remove_file)
+                        flush();
                     m_ofile->close();
                     if (!m_ofile->good())
                         throw_error("Could not close write stream");
                 }
+                m_ifile->close();
+                if (!m_ifile->good())
+                    throw_error("Could not close read stream");
                 if (remove_file) {
                     sdsl::remove(m_filename);
                 }
