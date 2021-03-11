@@ -208,7 +208,7 @@ template<class T>
 uint64_t hashvalue_of_classname(const T&)
 {
     std::hash<std::string> str_hash;
-    return str_hash(sdsl::util::demangle2(typeid(T).name()));
+    return str_hash(demangle2(typeid(T).name()));
 }
 
 //! Transforms the demangled class name of an object to a hash value.
@@ -219,12 +219,12 @@ std::string class_to_hash(const T& t)
 }
 
 template<class T>
-std::string class_name(const T& t)
+std::string class_name(const T&)
 {
-    std::string result = demangle2(typeid(t).name());
-    size_t template_pos = result.find("<");
+    std::string result = demangle2(typeid(T).name());
+    std::string::size_type template_pos = result.find('<');
     if (template_pos != std::string::npos) {
-        result = result.erase(template_pos);
+        result.erase(template_pos);
     }
     return result;
 }
