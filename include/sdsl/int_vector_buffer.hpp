@@ -100,7 +100,7 @@ class int_vector_buffer
                         throw_error("seekp error");
                 }
                 uint64_t wb = std::min(m_buffersize*width(), (m_size-m_begin)*width()+7)/8;
-                m_ofile->write(reinterpret_cast<char*>(m_buffer.data()), wb);
+                m_ofile->write(reinterpret_cast<const char*>(m_buffer.data()), wb);
                 if (!m_ofile->good())
                     throw_error("write block error");
                 m_ofile_pos += wb;
@@ -174,7 +174,7 @@ class int_vector_buffer
             m_offset += file_offset;
             if (mode & std::ios::out) {
                 m_ofile->open(m_filename, mode|(m_start ? std::ios::in : std::ios::openmode(0))|std::ios::binary);
-                if (!m_ofile->good())
+                if (!m_ofile)
                     throw_error("Could not open file for write");
                 m_ofile_pos = 0;
             }
@@ -280,7 +280,7 @@ class int_vector_buffer
             write_block();
             if (m_start < m_offset) { // in case of int_vector, write header and trailing zeros
                 uint64_t size = m_size*width();
-                m_ofile->seekp(m_start, std::ios::beg);
+                m_ofile->seekp(m_start);
                 int_vector<t_width>::write_header(size, width(), *m_ofile);
                 int64_t wb = (size+7)/8;
                 if (wb%8) {
@@ -289,6 +289,7 @@ class int_vector_buffer
                 }
             }
             m_ofile->flush();
+            m_ofile->seekp(m_ofile_pos);
             if (!m_ofile->good())
                 throw_error("flush failed");
         }
@@ -302,9 +303,11 @@ class int_vector_buffer
             m_ifile->close();
             m_ofile->close();
             m_ofile->open(m_filename, std::ios::out|std::ios::binary);
+            if (!m_ofile)
+                throw_error("Could not open file for write after reset");
             m_ifile->open(m_filename, std::ios::in|std::ios::binary);
-            assert(m_ifile->good());
-            assert(m_ofile->good());
+            if (!m_ifile)
+                throw_error("Could not open file for read after reset");
             // reset member variables
             m_need_to_write = false;
             m_size = 0;
@@ -341,17 +344,16 @@ class int_vector_buffer
         void close(bool remove_file=false)
         {
             if (is_open()) {
-                if (!remove_file && m_ofile->is_open()) {
-                    flush();
-                }
-                m_ifile->close();
-                if (!m_ifile->good())
-                    throw_error("Could not close read stream");
                 if (m_ofile->is_open()) {
+                    if (!remove_file)
+                        flush();
                     m_ofile->close();
                     if (!m_ofile->good())
                         throw_error("Could not close write stream");
                 }
+                m_ifile->close();
+                if (!m_ifile->good())
+                    throw_error("Could not close read stream");
                 if (remove_file) {
                     sdsl::remove(m_filename);
                 }
