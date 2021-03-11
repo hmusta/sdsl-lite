@@ -113,6 +113,7 @@ class int_vector_buffer
                     throw_error("write block error");
                 m_ofile_pos += wb;
                 m_ofile->flush();
+                m_ifile->sync();
                 if (!m_ofile->good())
                     throw_error("flush block error");
                 m_need_to_write = false;
@@ -297,7 +298,8 @@ class int_vector_buffer
                 }
             }
             m_ofile->flush();
-            if (!m_ofile->good())
+            m_ifile->sync();
+            if (!m_ofile->good() || !m_ifile->good())
                 throw_error("flush failed");
         }
 
