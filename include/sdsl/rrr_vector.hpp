@@ -103,33 +103,10 @@ class rrr_vector
         int_vector<> m_btnrp;  // Sample pointers into m_btnr.
         int_vector<> m_rank;   // Sample rank values.
 
-        void copy(const rrr_vector& rrr)
-        {
-            m_size = rrr.m_size;
-            m_bt = rrr.m_bt;
-            m_btnr = rrr.m_btnr;
-            m_btnrp = rrr.m_btnrp;
-            m_rank = rrr.m_rank;
-        }
-
     public:
-        const rac_type& bt     = m_bt;
-        const bit_vector& btnr = m_btnr;
 
         //! Default constructor
-        rrr_vector() {};
-
-        //! Copy constructor
-        rrr_vector(const rrr_vector& rrr)
-        {
-            copy(rrr);
-        }
-
-        //! Move constructor
-        rrr_vector(rrr_vector&& rrr) : m_size(std::move(rrr.m_size)),
-            m_bt(std::move(rrr.m_bt)),
-            m_btnr(std::move(rrr.m_btnr)), m_btnrp(std::move(rrr.m_btnrp)),
-            m_rank(std::move(rrr.m_rank)) {}
+        rrr_vector() {}
 
         //! Constructor
         /*!
@@ -383,22 +360,6 @@ class rrr_vector
                 } while (len > 0);
             }
             return res;
-        }
-
-        //! Assignment operator
-        rrr_vector& operator=(const rrr_vector& rrr)
-        {
-            if (this != &rrr) {
-                copy(rrr);
-            }
-            return *this;
-        }
-
-        //! Move assignment operator
-        rrr_vector& operator=(rrr_vector&& rrr)
-        {
-            swap(rrr);
-            return *this;
         }
 
         //! Returns the size of the original bit vector.

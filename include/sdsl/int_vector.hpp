@@ -346,7 +346,7 @@ class int_vector
         }
 
         //! Move constructor.
-        int_vector(int_vector&& v);
+        int_vector(int_vector&& v) noexcept;
 
         //! Copy constructor.
         int_vector(const int_vector& v);
@@ -494,7 +494,7 @@ class int_vector
         int_vector& operator=(const int_vector& v);
 
         //! Move assignment operator.
-        int_vector& operator=(int_vector&& v);
+        int_vector& operator=(int_vector&& v) noexcept;
 
         //! Equality operator for two int_vectors.
         /*! Two int_vectors are equal if
@@ -1205,7 +1205,7 @@ inline int_vector<t_width>::int_vector(size_type size, value_type default_value,
 }
 
 template<uint8_t t_width>
-inline int_vector<t_width>::int_vector(int_vector&& v) :
+inline int_vector<t_width>::int_vector(int_vector&& v) noexcept :
     m_size(v.m_size), m_data(v.m_data), m_width(v.m_width)
 {
     v.m_data = nullptr; // ownership of v.m_data now transferred
@@ -1241,7 +1241,7 @@ int_vector<t_width>& int_vector<t_width>::operator=(const int_vector& v)
 }
 
 template<uint8_t t_width>
-int_vector<t_width>& int_vector<t_width>::operator=(int_vector&& v)
+int_vector<t_width>& int_vector<t_width>::operator=(int_vector&& v) noexcept
 {
     swap(v);
     return *this;
