@@ -153,9 +153,18 @@ class dac_vector_dp
             this->swap(other);
         }
 
-        dac_vector_dp& operator=(dac_vector_dp other) {
+        dac_vector_dp& operator=(dac_vector_dp&& other) {
             this->swap(other);
             return *this;
+        }
+
+        dac_vector_dp& operator=(const dac_vector_dp& other) {
+            m_size = other.m_size;
+            m_overflow = other.m_overflow;
+            m_overflow_rank = other.m_overflow_rank;
+            m_overflow_rank.set_vector(&m_overflow);
+            m_data = other.m_data;
+            m_offsets = other.m_offsets;
         }
 
         double cost(size_t n, size_t m) {
@@ -218,7 +227,7 @@ class dac_vector_dp
                 lvl--;
                 bit_sizes.push_back(b);
             }
-            assert(bit_sizes.size() <= max_levels);
+            assert(bit_sizes.size() <= (unsigned int)max_levels);
 
             size_t total_overflow_size = 0;
             for (size_t i = 0; i < c.size(); ++i) {
