@@ -33,7 +33,7 @@ class osfstream : public std::ostream
         //! Close the stream.
         void close();
         //! Standard destructor
-        ~osfstream();
+        ~osfstream() override;
         //! Cast to void*
         operator  voidptr() const;
 
@@ -63,7 +63,7 @@ class isfstream : public std::istream
         //! Close the stream.
         void close();
         //! Standard destructor
-        ~isfstream();
+        ~isfstream() override;
         //! Cast to void*
         operator  voidptr() const;
 

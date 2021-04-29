@@ -66,8 +66,6 @@ struct pc_node {
 
     pc_node(uint64_t freq=0, uint64_t sym=0, uint64_t parent=undef,
             uint64_t child_left=undef, uint64_t child_right=undef);
-
-    pc_node& operator=(const pc_node& v);
 };
 
 template<class t_tree_strat_fat>
@@ -84,17 +82,6 @@ struct _node {
         bv_pos(bv_pos), bv_pos_rank(bv_pos_rank), parent(parent) {
         child[0] = child_left;
         child[1] = child_right;
-    }
-
-    _node& operator=(const _node& v) {
-        if (this != &v) {
-            bv_pos      = v.bv_pos;
-            bv_pos_rank = v.bv_pos_rank;
-            parent        = v.parent;
-            child[0]      = v.child[0];
-            child[1]      = v.child[1];
-        }
-        return *this;
     }
 
     _node& operator=(const pc_node& v) {

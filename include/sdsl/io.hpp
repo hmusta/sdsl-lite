@@ -307,7 +307,7 @@ double size_in_mega_bytes(const T& t);
 
 class nullstream : public std::ostream {
   public:
-    ~nullstream();
+    ~nullstream() override;
     class nullbuf : public std::streambuf {
       public:
         int overflow(int c) override;
