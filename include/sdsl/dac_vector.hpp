@@ -165,6 +165,7 @@ class dac_vector_dp
             m_overflow_rank.set_vector(&m_overflow);
             m_data = other.m_data;
             m_offsets = other.m_offsets;
+            return *this;
         }
 
         double cost(size_t n, size_t m) {
