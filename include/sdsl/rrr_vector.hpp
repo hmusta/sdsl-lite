@@ -520,14 +520,6 @@ class rank_support_rrr
             m_v = v;
         }
 
-        rank_support_rrr& operator=(const rank_support_rrr& rs)
-        {
-            if (this != &rs) {
-                set_vector(rs.m_v);
-            }
-            return *this;
-        }
-
         void swap(rank_support_rrr&) { }
 
         //! Load the data structure from a stream and set the supported vector.
