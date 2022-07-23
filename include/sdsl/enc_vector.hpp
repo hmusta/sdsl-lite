@@ -160,6 +160,9 @@ class enc_vector
         //! Load the enc_vector from a stream.
         void load(std::istream& in);
 
+        //! Returns the representation size in bits.
+        size_type compressed_size() const { return 64 + m_z.capacity() + m_sample_vals_and_pointer.capacity(); }
+
         //! Returns the i-th sample of enc_vector
         /*! \param i The index of the sample. 0 <= i < size()/get_sample_dens()
          *  \return The value of the i-th sample.
