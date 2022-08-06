@@ -26,11 +26,14 @@
 #include "sfstream.hpp"
 #include "ram_fs.hpp"
 #include <cassert>
+#include <chrono>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <stdio.h>
 #include <string>
+#include <thread>
 
 namespace sdsl
 {
@@ -87,16 +90,35 @@ class int_vector_buffer
             if (m_need_to_write) {
                 assert(m_ofile->is_open());
                 std::streampos pos = m_offset+static_cast<std::streampos>(m_begin*width()/8);
-                m_ofile->seekp(pos);
-                if (!m_ofile->good())
-                    throw_error("seekp error");
-                uint64_t wb = std::min(m_buffersize*width(), (m_size-m_begin)*width()+7)/8;
-                m_ofile->write(reinterpret_cast<const char*>(m_buffer.data()), wb);
-                if (!m_ofile->good())
-                    throw_error("write block error");
-                m_ofile->flush();
-                if (!m_ofile->good())
-                    throw_error("flush block error");
+                int attempt = 0;
+                while (true) {
+                    try {
+                        m_ofile->seekp(pos);
+                        if (!m_ofile->good())
+                            throw_error("seekp error");
+                        uint64_t wb = std::min(m_buffersize*width(), (m_size-m_begin)*width()+7)/8;
+                        m_ofile->write(reinterpret_cast<const char*>(m_buffer.data()), wb);
+                        if (!m_ofile->good())
+                            throw_error("write block error");
+                        m_ofile->flush();
+                        if (!m_ofile->good())
+                            throw_error("flush block error");
+                        break;
+
+                    } catch (...) {
+                        if (++attempt > 100)
+                            throw;
+                        std::time_t current_time = std::time(nullptr);
+                        std::string current_time_str(std::ctime(&current_time));
+                        current_time_str.pop_back(); // remove '\n'
+                        std::cerr << "[" + current_time_str + "] Warning: int_vector_buffer write block (file "
+                                        + m_filename + ", attempt " + std::to_string(attempt)
+                                        + ") failed, will try again in 10 sec" << std::endl;
+                        m_ofile.reset(new sdsl::osfstream());
+                        std::this_thread::sleep_for(std::chrono::seconds(10));
+                        m_ofile->open(m_filename, std::ios::in|std::ios::out|std::ios::binary);
+                    }
+                }
                 m_need_to_write = false;
             }
         }
