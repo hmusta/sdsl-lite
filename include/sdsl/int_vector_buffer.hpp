@@ -293,7 +293,7 @@ class int_vector_buffer
                 int_vector<t_width>::write_header(size, width(), *m_ofile);
                 int64_t wb = (size+7)/8;
                 if (wb%8) {
-                    m_ofile->seekp(m_offset+wb);
+                    m_ofile->seekp(m_offset.operator+(wb));
                     m_ofile->write("\0\0\0\0\0\0\0\0", 8-wb%8);
                 }
             }
