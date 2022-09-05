@@ -828,7 +828,7 @@ inline void swap(int_vector_reference<bit_vector> x,
 
 
 template<class t_int_vector>
-class int_vector_iterator_base: public std::iterator<std::random_access_iterator_tag, typename t_int_vector::value_type, typename t_int_vector::difference_type>
+class int_vector_iterator_base
 {
     public:
         typedef uint64_t  size_type;
@@ -849,12 +849,14 @@ class int_vector_iterator : public int_vector_iterator_base<t_int_vector>
 {
     public:
 
-        typedef int_vector_reference<t_int_vector>     reference;
-        typedef uint64_t                               value_type;
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = typename t_int_vector::value_type;
+        using difference_type = typename t_int_vector::difference_type;
+        using pointer = typename t_int_vector::value_type*;
+        using reference = int_vector_reference<t_int_vector>;
+
         typedef int_vector_iterator                    iterator;
-        typedef reference*                             pointer;
         typedef typename t_int_vector::size_type       size_type;
-        typedef typename t_int_vector::difference_type difference_type;
 
         friend class int_vector_const_iterator<t_int_vector>;
     private:
@@ -1011,11 +1013,14 @@ class int_vector_const_iterator : public int_vector_iterator_base<t_int_vector>
 {
     public:
 
-        typedef typename t_int_vector::value_type        const_reference;
-        typedef const typename t_int_vector::value_type* pointer;
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = const typename t_int_vector::value_type;
+        using difference_type = typename t_int_vector::difference_type;
+        using pointer = const typename t_int_vector::value_type*;
+        using reference = const typename t_int_vector::value_type;
+
         typedef int_vector_const_iterator                const_iterator;
         typedef typename t_int_vector::size_type         size_type;
-        typedef typename t_int_vector::difference_type   difference_type;
 
         template<class X>
         friend typename int_vector_const_iterator<X>::difference_type
@@ -1045,7 +1050,7 @@ class int_vector_const_iterator : public int_vector_iterator_base<t_int_vector>
             return *this;
         }
 
-        const_reference operator*() const
+        reference operator*() const
         {
             return bits::read_int(m_word, m_offset, m_len);
         }
@@ -1126,7 +1131,7 @@ class int_vector_const_iterator : public int_vector_iterator_base<t_int_vector>
             return it -= i;
         }
 
-        const_reference operator[](difference_type i) const
+        reference operator[](difference_type i) const
         {
             return *(*this + i);
         }

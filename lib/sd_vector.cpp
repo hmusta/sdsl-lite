@@ -49,4 +49,23 @@ void sd_vector_builder::swap(sd_vector_builder& sdb)
     m_high.swap(sdb.m_high);
 }
 
+template<>
+sd_vector<>::sd_vector(sd_vector_builder& builder)
+{
+    if (builder.items() < builder.capacity()) {
+        throw std::runtime_error("sd_vector: the builder is not full.");
+    } else if (builder.items() > builder.capacity()) {
+        throw std::runtime_error("sd_vector: builder overflow.");
+    }
+
+    m_size = builder.m_size;
+    m_wl = builder.m_wl;
+    m_low.swap(builder.m_low);
+    m_high.swap(builder.m_high);
+    util::init_support(m_high_1_select, &m_high);
+    util::init_support(m_high_0_select, &m_high);
+
+    builder = sd_vector_builder();
+}
+
 } // end namespace

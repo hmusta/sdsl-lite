@@ -278,11 +278,7 @@ class sd_vector
             m_size = builder.m_size;
             m_wl = builder.m_wl;
             m_low.swap(builder.m_low);
-            if constexpr(std::is_same<hi_bit_vector_type, bit_vector>::value) {
-                m_high.swap(builder.m_high);
-            } else {
-                util::assign(m_high, builder.m_high);
-            }
+            util::assign(m_high, builder.m_high);
             util::init_support(m_high_1_select, &m_high);
             util::init_support(m_high_0_select, &m_high);
 
@@ -444,6 +440,9 @@ class sd_vector
             return iterator(this, size());
         }
 };
+
+//! Specialized constructor that is a bit more space-efficient than the default.
+template<> sd_vector<>::sd_vector(sd_vector_builder& builder);
 
 template<uint8_t t_b>
 struct rank_support_sd_trait {

@@ -22,6 +22,8 @@
 #ifndef INCLUDED_SDSL_WT_GMR
 #define INCLUDED_SDSL_WT_GMR
 
+#include <algorithm> // for lower_bound
+
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/int_vector.hpp>
 #include <sdsl/int_vector_buffer.hpp>
@@ -485,7 +487,7 @@ class wt_gmr_rs
                             ++search_begin;
                         }
                     } else {
-                        if (binary_search(m_e.begin()+search_begin, m_e.begin()+search_end, val)) {
+                        if (std::binary_search(m_e.begin()+search_begin, m_e.begin()+search_end, val)) {
                             return (block-1)/m_blocks;
                         }
                     }
@@ -520,7 +522,7 @@ class wt_gmr_rs
             if (end-begin<50) { // After a short test, this seems to be a good threshold
                 offset = std::find_if(begin, end, [&val](const decltype(*begin) x) { return x > val; }) - begin;
             } else {
-                offset = lower_bound(begin, end, val+1)-begin;
+                offset = std::lower_bound(begin, end, val+1)-begin;
             }
             return (begin-m_e.begin())+offset-ones_before_cblock;
         }
@@ -556,7 +558,7 @@ class wt_gmr_rs
                             ++search_begin;
                         }
                     } else {
-                        offset = lower_bound(m_e.begin()+search_begin, m_e.begin()+search_end, val)-m_e.begin();
+                        offset = std::lower_bound(m_e.begin()+search_begin, m_e.begin()+search_end, val)-m_e.begin();
                         if (offset<search_end) {
                             if (m_e[offset]==val) {
                                 value_type c = (block-1)/m_blocks;
@@ -875,7 +877,7 @@ class wt_gmr
             if (end-begin<50) { // After a short test, this seems to be a good threshold
                 c_ones_in_chunk = std::find_if(begin, end, [&val](const decltype(*begin) x) { return x > val; }) - begin;
             } else {
-                c_ones_in_chunk = lower_bound(begin, end, val+1) - begin;
+                c_ones_in_chunk = std::lower_bound(begin, end, val+1) - begin;
             }
             return c_ones_before_chunk+c_ones_in_chunk;
         }

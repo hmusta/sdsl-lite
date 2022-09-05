@@ -44,10 +44,15 @@ namespace sdsl
  */
 // TODO: implement operator--
 template<class Cst, uint32_t cache_size=128>
-class cst_dfs_const_forward_iterator: public std::iterator<std::forward_iterator_tag, typename Cst::node_type>
+class cst_dfs_const_forward_iterator
 {
     public:
-        typedef typename Cst::node_type value_type;
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = typename Cst::node_type;
+        using difference_type = void;
+        using pointer = void;
+        using reference = void;
+
         typedef const value_type const_reference;
         typedef typename Cst::size_type size_type;
         typedef cst_dfs_const_forward_iterator<Cst> iterator;
@@ -177,10 +182,15 @@ class cst_dfs_const_forward_iterator: public std::iterator<std::forward_iterator
 
 //! A forward iterator for a bottom up traversal of a suffix tree
 template<class Cst>
-class cst_bottom_up_const_forward_iterator: public std::iterator<std::forward_iterator_tag, typename Cst::node_type>
+class cst_bottom_up_const_forward_iterator
 {
     public:
-        typedef typename Cst::node_type value_type;
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = typename Cst::node_type;
+        using difference_type = void;
+        using pointer = void;
+        using reference = void;
+
         typedef const value_type const_reference;
         typedef typename Cst::size_type size_type;
         typedef cst_bottom_up_const_forward_iterator<Cst> iterator;
@@ -251,10 +261,15 @@ class cst_bottom_up_const_forward_iterator: public std::iterator<std::forward_it
  *                  you should use an external implementation of a queue.
  */
 template<class Cst, class Queue = std::queue<typename Cst::node_type> >
-class cst_bfs_iterator: public std::iterator<std::forward_iterator_tag, typename Cst::node_type>
+class cst_bfs_iterator
 {
     public:
-        typedef typename Cst::node_type 		value_type;
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = typename Cst::node_type;
+        using difference_type = void;
+        using pointer = void;
+        using reference = void;
+
         typedef const value_type 				const_reference;
         typedef typename Cst::size_type 		size_type;
         typedef cst_bfs_iterator<Cst, Queue> 	iterator;
