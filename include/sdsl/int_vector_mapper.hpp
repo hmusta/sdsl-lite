@@ -123,7 +123,8 @@ class int_vector_mapper
 
         int_vector_mapper(const std::string filename,
                           bool is_plain = false,
-                          bool delete_on_close = false) :
+                          bool delete_on_close = false,
+                          uint64_t file_offset = 0) :
             m_file_name(filename), m_delete_on_close(delete_on_close)
         {
             size_type size_in_bits = 0;
@@ -135,6 +136,7 @@ class int_vector_mapper
                         "int_vector_mapper: file does not exist.");
                 }
                 if (!is_plain) {
+                    f.seekg(file_offset);
                     int_vector<t_width>::read_header(size_in_bits, int_width, f);
                 }
             }
@@ -142,6 +144,7 @@ class int_vector_mapper
 
             if (!is_plain) {
                 m_data_offset = t_width ? 8 : 9;
+                m_data_offset += file_offset;
             } else {
                 if (8 != t_width and 16 != t_width and 32 != t_width and 64 != t_width) {
                     throw std::runtime_error("int_vector_mapper: plain vector can "
@@ -181,6 +184,11 @@ class int_vector_mapper
             m_wrapper.m_size = size_in_bits;
             m_wrapper.m_data = (uint64_t*)(m_mapped_data + m_data_offset);
 
+        }
+
+        const int_vector<t_width>& wrapper() const
+        {
+            return m_wrapper;
         }
 
         std::string file_name() const { return m_file_name; }
