@@ -161,11 +161,6 @@ std::string to_latex_string(unsigned char c)
         return to_string(c);
 }
 
-void set_verbose()
-{
-    verbose = true;
-}
-
 size_t file_size(const std::string& file)
 {
     if (is_ram_file(file)) {

@@ -78,7 +78,7 @@ namespace util
 //SDSL_UNUSED
 static bool verbose = false;
 
-void set_verbose();
+inline void set_verbose() { verbose = true; }
 
 //============ Manipulating int_vectors ===================
 
