@@ -645,4 +645,6 @@ hugepage_allocator::determine_available_hugepage_memory()
 }
 #endif
 
+std::shared_ptr<mmap_context> mmap_ifstream::get_mmap_context() { return m_mmap_context; }
+
 }

@@ -267,6 +267,8 @@ struct int_vector_trait<8> {
     static void set_width(uint8_t, int_width_type) {}
 };
 
+class mmap_context;
+
 //! A generic vector class for integers of width \f$w\in [1..64]\f$.
 /*! \author Simon Gog
  *
@@ -317,6 +319,7 @@ class int_vector
         size_type      m_size;  //!< Number of bits needed to store int_vector.
         uint64_t*      m_data;  //!< Pointer to the memory for the bits.
         int_width_type m_width; //!< Width of the integers.
+        std::shared_ptr<mmap_context> m_mmap_context;
 
     public:
 
@@ -1256,6 +1259,10 @@ int_vector<t_width>& int_vector<t_width>::operator=(int_vector&& v) noexcept
 template<uint8_t t_width>
 int_vector<t_width>::~int_vector()
 {
+    if (m_mmap_context) {
+        m_data = nullptr;
+        m_size = 0;
+    }
     memory_manager::clear(*this);
 }
 
@@ -1266,12 +1273,15 @@ void int_vector<t_width>::swap(int_vector& v)
         size_type size     = m_size;
         uint64_t* data     = m_data;
         uint8_t  int_width = m_width;
+        std::shared_ptr<mmap_context> mmap_context = m_mmap_context;
         m_size   = v.m_size;
         m_data   = v.m_data;
         width(v.m_width);
+        m_mmap_context = v.m_mmap_context;
         v.m_size = size;
         v.m_data = data;
         v.width(int_width);
+        v.m_mmap_context = mmap_context;
     }
 }
 
@@ -1538,6 +1548,16 @@ void int_vector<t_width>::load(std::istream& in)
 {
     size_type size = 0;
     int_vector<t_width>::read_header(size, m_width, in);
+
+    if (auto *mmap_in = dynamic_cast<mmap_ifstream*>(&in)) {
+        m_mmap_context = mmap_in->get_mmap_context();
+        std::streamsize offset = in.tellg();
+        m_data = reinterpret_cast<uint64_t*>(m_mmap_context->data() + offset);
+        m_size = size;
+        in.seekg(offset + static_cast<std::streamsize>(capacity()>>6)
+                            * static_cast<std::streamsize>(sizeof(uint64_t)));
+        return;
+    }
 
     bit_resize(size);
     uint64_t* p = m_data;
