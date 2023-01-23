@@ -1214,7 +1214,7 @@ inline int_vector<t_width>::int_vector(size_type size, value_type default_value,
 
 template<uint8_t t_width>
 inline int_vector<t_width>::int_vector(int_vector&& v) noexcept :
-    m_size(v.m_size), m_data(v.m_data), m_width(v.m_width)
+    m_size(v.m_size), m_data(v.m_data), m_width(v.m_width), m_mmap_context(std::move(v.m_mmap_context))
 {
     v.m_data = nullptr; // ownership of v.m_data now transferred
     v.m_size = 0;
