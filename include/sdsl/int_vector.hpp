@@ -625,7 +625,12 @@ class int_vector_reference
             \param len length of the integer, should be v->width()!!!
         */
         int_vector_reference(value_type* word, uint8_t offset, uint8_t len):
-            m_word(word),m_offset(offset),m_len(len) {}
+            m_word(word),m_offset(offset),m_len(len)
+        {
+            assert(m_len <= 64);
+            if (m_len > 64)
+                __builtin_unreachable();
+        }
 
         //! Assignment operator for the proxy class
         /*!
