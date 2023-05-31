@@ -490,11 +490,10 @@ void util::set_to_value(t_int_vec& v, uint64_t k)
     uint64_t vec[67] = {0}; // allocate memory for the mask and initialize with zeros
     vec[0] = 0;
     uint8_t offset = 0;
-    uint64_t n=0, vals=0;
+    uint64_t n=0;
     do { // loop terminates after at most 64 iterations
         vec[n] = vec[n] | (k << offset);
         offset += int_width;
-        vals++;
         if (offset >= 64) {
             vec[n+1] = 0;
             vec[++n] = k >> (int_width-(offset-64));
