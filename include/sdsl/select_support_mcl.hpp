@@ -457,9 +457,22 @@ void select_support_mcl<t_b,t_pat_len>::load(std::istream& in, const bit_vector*
 
         m_block = new int_vector<0>[sb]; // Create miniblock int_vector<0>
 
-        for (size_type i=0; i < sb; ++i) {
-            m_block[i].load(in);
+        std::shared_ptr<mmap_context> m_mmap_context;
+        std::streamsize offset = 0;
+        if (auto *mmap_in = dynamic_cast<mmap_ifstream*>(&in)) {
+            m_mmap_context = mmap_in->get_mmap_context();
+            offset = in.tellg();
         }
+
+        for (size_type i=0; i < sb; ++i) {
+            if (offset) {
+                offset += m_block[i].load(m_mmap_context, offset);
+            } else {
+                m_block[i].load(in);
+            }
+        }
+        if (offset)
+            in.seekg(offset);
     }
 }
 

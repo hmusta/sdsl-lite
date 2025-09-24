@@ -508,7 +508,8 @@ class mmap_context {
         }
     }
 
-    uint8_t* data() const { return m_mapped_data; }
+    inline uint8_t* data() const { return m_mapped_data; }
+    inline uint64_t file_size_bytes() const { return m_file_size_bytes; }
     const std::string& filename() const { return m_file_name; }
 
   private:

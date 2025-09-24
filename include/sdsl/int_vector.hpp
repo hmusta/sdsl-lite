@@ -479,6 +479,23 @@ class int_vector
         //! Load the int_vector for a stream.
         void load(std::istream& in);
 
+        //! Load from a mmaped file after serialization. Returns the number of bytes read.
+        size_t load(const std::shared_ptr<mmap_context>& mmap_context, size_t offset)
+        {
+            if (!m_mmap_context && m_data)
+                memory_manager::clear(*this);
+            if (mmap_context->file_size_bytes() < offset + (t_width ? 8 : 9))
+                throw std::runtime_error("trying reading beyond the mmap'ed file");
+            m_mmap_context = mmap_context;
+            m_size = *reinterpret_cast<uint64_t*>(mmap_context->data() + offset);
+            if constexpr(t_width == 0)
+                m_width = *reinterpret_cast<uint8_t*>(mmap_context->data() + offset + 8);
+            m_data = reinterpret_cast<uint64_t*>(mmap_context->data() + offset + (t_width ? 8 : 9));
+            if (mmap_context->file_size_bytes() < offset + (t_width ? 8 : 9) + ((m_size + 63)>>6) * 8)
+                throw std::runtime_error("int_vector spans beyond the mmap'ed file");
+            return (t_width ? 8 : 9) + ((m_size + 63)>>6) * 8;
+        }
+
         //! non const version of [] operator
         /*! \param i Index the i-th integer of length width().
          *  \return A reference to the i-th integer of length width().
@@ -1267,8 +1284,9 @@ int_vector<t_width>::~int_vector()
     if (m_mmap_context) {
         m_data = nullptr;
         m_size = 0;
+    } else if (m_data) {
+        memory_manager::clear(*this);
     }
-    memory_manager::clear(*this);
 }
 
 template<uint8_t t_width>
@@ -1551,19 +1569,16 @@ typename int_vector<t_width>::size_type int_vector<t_width>::serialize(std::ostr
 template<uint8_t t_width>
 void int_vector<t_width>::load(std::istream& in)
 {
-    size_type size = 0;
-    int_vector<t_width>::read_header(size, m_width, in);
-
     if (auto *mmap_in = dynamic_cast<mmap_ifstream*>(&in)) {
-        m_mmap_context = mmap_in->get_mmap_context();
+        if (!in.good())
+            throw std::ios_base::failure("bad stream");
         std::streamsize offset = in.tellg();
-        m_data = reinterpret_cast<uint64_t*>(m_mmap_context->data() + offset);
-        m_size = size;
-        in.seekg(offset + static_cast<std::streamsize>(capacity()>>6)
-                            * static_cast<std::streamsize>(sizeof(uint64_t)));
+        offset += load(mmap_in->get_mmap_context(), offset);
+        in.seekg(offset);
         return;
     }
-
+    size_type size = 0;
+    int_vector<t_width>::read_header(size, m_width, in);
     bit_resize(size);
     uint64_t* p = m_data;
     size_type idx = 0;
