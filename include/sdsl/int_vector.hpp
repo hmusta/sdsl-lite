@@ -488,8 +488,8 @@ class int_vector
                 throw std::runtime_error("trying reading beyond the mmap'ed file");
             m_mmap_context = mmap_context;
             m_size = *reinterpret_cast<uint64_t*>(mmap_context->data() + offset);
-            if constexpr(t_width == 0)
-                m_width = *reinterpret_cast<uint8_t*>(mmap_context->data() + offset + 8);
+            if (t_width == 0)
+                width(*reinterpret_cast<uint8_t*>(mmap_context->data() + offset + 8));
             m_data = reinterpret_cast<uint64_t*>(mmap_context->data() + offset + (t_width ? 8 : 9));
             if (mmap_context->file_size_bytes() < offset + (t_width ? 8 : 9) + ((m_size + 63)>>6) * 8)
                 throw std::runtime_error("int_vector spans beyond the mmap'ed file");
