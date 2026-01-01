@@ -268,7 +268,6 @@ isfstream::seekg(off_type off, std::ios_base::seekdir way)
 std::streampos
 isfstream::tellg()
 {
-    ios_base::iostate __state = ios_base::goodbit;
     pos_type p = pos_type(off_type(-1));
     try {
         if (!this->fail()) {
