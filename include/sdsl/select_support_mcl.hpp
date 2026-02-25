@@ -216,8 +216,7 @@ inline uint64_t select_support_mcl<t_b,t_pat_len>::miniblock_value(size_type sb_
     const uint8_t width = m_block_width[sb_idx];
     assert(width > 0 and width <= 64);
     const size_type SUPER_BLOCK_SIZE = 4096;
-    const size_type miniblock_size = (m_miniblock.size() and !m_miniblock[sb_idx]) ? SUPER_BLOCK_SIZE : 64;
-    assert(idx < miniblock_size);
+    assert(idx < ((m_miniblock.size() and !m_miniblock[sb_idx]) ? SUPER_BLOCK_SIZE : 64));
     const size_type bit_idx = idx * static_cast<size_type>(width);
     const size_type byte_offset = m_block_offset[sb_idx];
     const uint64_t* data = reinterpret_cast<const uint64_t*>(m_mmap_context->data() + byte_offset);
