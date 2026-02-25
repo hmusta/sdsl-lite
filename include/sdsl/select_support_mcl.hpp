@@ -86,6 +86,7 @@ class select_support_mcl : public select_support
         int_vector<0> m_block_offset;
         int_vector<8> m_block_width;
         size_type m_arg_cnt             = 0;
+        inline size_type miniblock_size(size_type sb_idx) const;
         inline uint64_t miniblock_value(size_type sb_idx, size_type idx) const;
         void copy(const select_support_mcl<t_b, t_pat_len>& ss);
         void initData();
@@ -205,6 +206,12 @@ void select_support_mcl<t_b,t_pat_len>::copy(const select_support_mcl<t_b, t_pat
 }
 
 template<uint8_t t_b, uint8_t t_pat_len>
+inline size_type select_support_mcl<t_b,t_pat_len>::miniblock_size(size_type sb_idx) const
+{
+    return (m_miniblock.size() and !m_miniblock[sb_idx]) ? 4096 : 64;
+}
+
+template<uint8_t t_b, uint8_t t_pat_len>
 inline uint64_t select_support_mcl<t_b,t_pat_len>::miniblock_value(size_type sb_idx, size_type idx) const
 {
     if (m_block != nullptr) {
@@ -215,7 +222,7 @@ inline uint64_t select_support_mcl<t_b,t_pat_len>::miniblock_value(size_type sb_
     assert(sb_idx < m_block_width.size());
     const uint8_t width = m_block_width[sb_idx];
     assert(width > 0 and width <= 64);
-    assert(idx < ((m_miniblock.size() and !m_miniblock[sb_idx]) ? 4096 : 64));
+    assert(idx < miniblock_size(sb_idx));
     const size_type bit_idx = idx * static_cast<size_type>(width);
     const size_type byte_offset = m_block_offset[sb_idx];
     const uint64_t* data = reinterpret_cast<const uint64_t*>(m_mmap_context->data() + byte_offset);
@@ -517,13 +524,13 @@ void select_support_mcl<t_b,t_pat_len>::load(std::istream& in, const bit_vector*
                 if (file_size < 9 or offset > file_size - 9) {
                     throw std::runtime_error("trying reading beyond the mmap'ed file");
                 }
-                uint64_t size_bits = *reinterpret_cast<uint64_t*>(m_mmap_context->data() + offset);
                 m_block_width[i] = *reinterpret_cast<uint8_t*>(m_mmap_context->data() + offset + 8);
                 assert(m_block_width[i] > 0 and m_block_width[i] <= 64);
-                assert(size_bits == ((m_miniblock.size() and !m_miniblock[i]) ? 4096 : 64)
-                                                        * static_cast<uint64_t>(m_block_width[i]));
+                assert(*reinterpret_cast<uint64_t*>(m_mmap_context->data() + offset)
+                       == miniblock_size(i) * static_cast<uint64_t>(m_block_width[i]));
                 m_block_offset[i] = offset + 9;
-                const size_type bytes = 9 + (((size_bits + 63) >> 6) << 3);
+                const size_type bytes = 9 + (((miniblock_size(i)
+                                               * static_cast<size_type>(m_block_width[i]) + 63) >> 6) << 3);
                 if (bytes > file_size or offset > file_size - bytes) {
                     throw std::runtime_error("int_vector spans beyond the mmap'ed file");
                 }
