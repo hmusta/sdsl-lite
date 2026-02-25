@@ -82,7 +82,11 @@ class select_support_mcl : public select_support
         int_vector<0> m_superblock;
         bit_vector m_miniblock;
         int_vector<0>* m_block          = nullptr;
+        std::shared_ptr<mmap_context> m_mmap_context;
+        int_vector<0> m_block_offset;
+        int_vector<8> m_block_width;
         size_type m_arg_cnt             = 0;
+        inline uint64_t miniblock_value(size_type sb_idx, size_type idx) const;
         void copy(const select_support_mcl<t_b, t_pat_len>& ss);
         void initData();
         void init_fast(const bit_vector* v=nullptr);
@@ -148,6 +152,9 @@ select_support_mcl<t_b, t_pat_len>& select_support_mcl<t_b,t_pat_len>::operator=
         m_v          = ss.m_v;          // copy pointer to the supported bit vector
 
         m_miniblock = std::move(ss.m_miniblock);
+        m_mmap_context = std::move(ss.m_mmap_context);
+        m_block_offset = std::move(ss.m_block_offset);
+        m_block_width = std::move(ss.m_block_width);
 
         delete [] m_block;
         m_block = ss.m_block;
@@ -165,6 +172,9 @@ void select_support_mcl<t_b,t_pat_len>::swap(select_support_mcl& ss)
     m_superblock.swap(ss.m_superblock);
     std::swap(m_miniblock, ss.m_miniblock);
     std::swap(m_block, ss.m_block);
+    std::swap(m_mmap_context, ss.m_mmap_context);
+    m_block_offset.swap(ss.m_block_offset);
+    m_block_width.swap(ss.m_block_width);
     std::swap(m_arg_cnt, ss.m_arg_cnt);
 }
 
@@ -180,6 +190,9 @@ void select_support_mcl<t_b,t_pat_len>::copy(const select_support_mcl<t_b, t_pat
     size_type sb = (m_arg_cnt+4095)>>12;
 
     m_miniblock = ss.m_miniblock;
+    m_mmap_context = ss.m_mmap_context;
+    m_block_offset = ss.m_block_offset;
+    m_block_width = ss.m_block_width;
 
     delete [] m_block;
     m_block = nullptr;
@@ -189,6 +202,26 @@ void select_support_mcl<t_b,t_pat_len>::copy(const select_support_mcl<t_b, t_pat
             m_block[i] = ss.m_block[i];
         }
     }
+}
+
+template<uint8_t t_b, uint8_t t_pat_len>
+inline uint64_t select_support_mcl<t_b,t_pat_len>::miniblock_value(size_type sb_idx, size_type idx) const
+{
+    if (m_block != nullptr) {
+        return m_block[sb_idx][idx];
+    }
+    assert(m_mmap_context);
+    assert(sb_idx < m_block_offset.size());
+    assert(sb_idx < m_block_width.size());
+    const uint8_t width = m_block_width[sb_idx];
+    assert(width > 0 and width <= 64);
+    const size_type SUPER_BLOCK_SIZE = 4096;
+    const size_type miniblock_size = (m_miniblock.size() and !m_miniblock[sb_idx]) ? SUPER_BLOCK_SIZE : 64;
+    assert(idx < miniblock_size);
+    const size_type bit_idx = idx * static_cast<size_type>(width);
+    const size_type byte_offset = m_block_offset[sb_idx];
+    const uint64_t* data = reinterpret_cast<const uint64_t*>(m_mmap_context->data() + byte_offset);
+    return bits::read_int(data + (bit_idx >> 6), static_cast<uint8_t>(bit_idx & 0x3F), width);
 }
 
 template<uint8_t t_b, uint8_t t_pat_len>
@@ -339,17 +372,16 @@ inline auto select_support_mcl<t_b,t_pat_len>::select(size_type i)const -> size_
     size_type sb_idx = i>>12;   // i/4096
     size_type offset = i&0xFFF; // i%4096
     if (m_miniblock.size() and !m_miniblock[sb_idx]) {
-        return m_block[sb_idx][offset]; // long superblock
+        return miniblock_value(sb_idx, offset); // long superblock
     } else {
         if ((offset&0x3F)==0) {
             assert(sb_idx < m_superblock.size());
-            assert((offset>>6) < m_block[sb_idx].size());
-            return m_superblock[sb_idx] + m_block[sb_idx][offset>>6/*/64*/];
+            return m_superblock[sb_idx] + miniblock_value(sb_idx, offset>>6/*/64*/);
         } else {
             i = i-(sb_idx<<12)-((offset>>6)<<6);
             // now i > 0 and i <= 64
             assert(i > 0);
-            size_type pos = m_superblock[sb_idx] + m_block[sb_idx][offset>>6] + 1;
+            size_type pos = m_superblock[sb_idx] + miniblock_value(sb_idx, offset>>6) + 1;
 
             // now pos is the position from where we search for the ith argument
             size_type word_pos = pos>>6;
@@ -397,6 +429,9 @@ void select_support_mcl<t_b,t_pat_len>::initData()
         m_logn4 = m_logn2*m_logn2;
     }
     m_miniblock = bit_vector();
+    m_mmap_context.reset();
+    m_block_offset = int_vector<0>();
+    m_block_width = int_vector<8>();
     delete[] m_block;
     m_block = nullptr;
 }
@@ -424,10 +459,25 @@ auto select_support_mcl<t_b,t_pat_len>::serialize(std::ostream& out, structure_t
         size_type written_bytes_long = 0;
         size_type written_bytes_mini = 0;
         for (size_type i=0; i < sb; ++i) {
-            if (m_miniblock.size() and !m_miniblock[i]) {
-                written_bytes_long += m_block[i].serialize(out);
+            const bool is_long = (m_miniblock.size() and !m_miniblock[i]);
+            if (m_block != nullptr) {
+                if (is_long) {
+                    written_bytes_long += m_block[i].serialize(out);
+                } else {
+                    written_bytes_mini += m_block[i].serialize(out);
+                }
             } else {
-                written_bytes_mini += m_block[i].serialize(out);
+                assert(m_mmap_context);
+                assert(i < m_block_offset.size());
+                const size_type header_offset = m_block_offset[i] - 9;
+                const uint64_t size_bits = *reinterpret_cast<uint64_t*>(m_mmap_context->data() + header_offset);
+                const size_type bytes = 9 + (((size_bits + 63) >> 6) << 3);
+                out.write(reinterpret_cast<const char*>(m_mmap_context->data() + header_offset), bytes);
+                if (is_long) {
+                    written_bytes_long += bytes;
+                } else {
+                    written_bytes_mini += bytes;
+                }
             }
         }
         written_bytes += written_bytes_long;
@@ -455,24 +505,39 @@ void select_support_mcl<t_b,t_pat_len>::load(std::istream& in, const bit_vector*
 
         m_miniblock.load(in); // Load the mini_or_long helper vector
 
-        m_block = new int_vector<0>[sb]; // Create miniblock int_vector<0>
-
-        std::shared_ptr<mmap_context> m_mmap_context;
-        std::streamsize offset = 0;
         if (auto *mmap_in = dynamic_cast<mmap_ifstream*>(&in)) {
             m_mmap_context = mmap_in->get_mmap_context();
-            offset = in.tellg();
-        }
-
-        for (size_type i=0; i < sb; ++i) {
-            if (offset) {
-                offset += m_block[i].load(m_mmap_context, offset);
-            } else {
+            std::streampos stream_offset = in.tellg();
+            if (stream_offset < 0) {
+                throw std::ios_base::failure("bad stream");
+            }
+            size_type offset = static_cast<size_type>(stream_offset);
+            const size_type file_size = m_mmap_context->file_size_bytes();
+            m_block_offset = int_vector<0>(sb, 0, 64);
+            m_block_width = int_vector<8>(sb, 0);
+            for (size_type i=0; i < sb; ++i) {
+                if (file_size < 9 or offset > file_size - 9) {
+                    throw std::runtime_error("trying reading beyond the mmap'ed file");
+                }
+                uint64_t size_bits = *reinterpret_cast<uint64_t*>(m_mmap_context->data() + offset);
+                m_block_width[i] = *reinterpret_cast<uint8_t*>(m_mmap_context->data() + offset + 8);
+                assert(m_block_width[i] > 0 and m_block_width[i] <= 64);
+                assert(size_bits == ((m_miniblock.size() and !m_miniblock[i]) ? 4096 : 64)
+                                                        * static_cast<uint64_t>(m_block_width[i]));
+                m_block_offset[i] = offset + 9;
+                const size_type bytes = 9 + (((size_bits + 63) >> 6) << 3);
+                if (bytes > file_size or offset > file_size - bytes) {
+                    throw std::runtime_error("int_vector spans beyond the mmap'ed file");
+                }
+                offset += bytes;
+            }
+            in.seekg(offset);
+        } else {
+            m_block = new int_vector<0>[sb]; // Create miniblock int_vector<0>
+            for (size_type i=0; i < sb; ++i) {
                 m_block[i].load(in);
             }
         }
-        if (offset)
-            in.seekg(offset);
     }
 }
 
