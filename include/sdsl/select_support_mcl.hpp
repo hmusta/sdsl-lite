@@ -208,7 +208,7 @@ void select_support_mcl<t_b,t_pat_len>::copy(const select_support_mcl<t_b, t_pat
 template<uint8_t t_b, uint8_t t_pat_len>
 inline size_type select_support_mcl<t_b,t_pat_len>::miniblock_size(size_type sb_idx) const
 {
-    return (m_miniblock.size() and !m_miniblock[sb_idx]) ? 4096 : 64;
+    return static_cast<size_type>((m_miniblock.size() and !m_miniblock[sb_idx]) ? 4096 : 64);
 }
 
 template<uint8_t t_b, uint8_t t_pat_len>
