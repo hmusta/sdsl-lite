@@ -14,19 +14,10 @@ jobs:
     - name: checkout submodules
       run: git submodule update --init --recursive
 
-    - name: install dependencies
-      run: |
-        sudo apt-get install g++-9
     - name: install sdsl-lite
-      run: |
-        export CC=$(which gcc-9)
-        export CXX=$(which g++-9)
-        ./install.sh $(pwd)
+      run: ./install.sh $(pwd)
     - name: test sdsl-lite
-      run: |
-        export CC=$(which gcc-9)
-        export CXX=$(which g++-9)
-        mkdir -p build && cd build && make test-sdsl
+      run: mkdir -p build && cd build && make test-sdsl
 
   build-linux-clang:
 
