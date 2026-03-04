@@ -475,21 +475,23 @@ class mmap_context {
         // open backend file depending on mode
         m_fd = memory_manager::open_file_for_mmap(m_file_name, std::ios_base::in);
         if (m_fd == -1) {
-            std::string open_error = "mmap_context: can't open file "
-                  + m_file_name + " for mmap. " + std::string(util::str_from_errno());
-            throw std::runtime_error(open_error);
+            throw std::runtime_error("mmap_context: can't open file "
+                  + m_file_name + " for mmap. " + std::string(util::str_from_errno()));
         }
 
         // mmap data
         m_mapped_data = reinterpret_cast<uint8_t*>(
                 memory_manager::mmap_file(m_fd, m_file_size_bytes, std::ios_base::in));
         if (m_mapped_data == nullptr) {
-            std::string mmap_error = "mmap_context: mmap error. "
-                  + std::string(util::str_from_errno());
-            throw std::runtime_error(mmap_error);
+            memory_manager::close_file_for_mmap(m_fd);
+            m_fd = -1;
+            throw std::runtime_error("mmap_context: mmap error. "
+                  + std::string(util::str_from_errno()));
         }
-
     }
+
+    mmap_context(const mmap_context&) = delete;
+    mmap_context& operator=(const mmap_context&) = delete;
 
     ~mmap_context() {
         if (m_mapped_data) {
@@ -529,8 +531,12 @@ class mmap_ifstream : public std::ifstream {
 
     virtual ~mmap_ifstream() override {}
 
-    virtual std::shared_ptr<mmap_context> get_mmap_context();
-    const std::string& get_filename() const { return m_mmap_context->filename(); }
+    virtual std::shared_ptr<mmap_context> get_mmap_context() { return m_mmap_context; }
+    const std::string& get_filename() const {
+        if (!m_mmap_context)
+            throw std::runtime_error("mmap_ifstream: stream not open");
+        return m_mmap_context->filename();
+    }
 
   private:
     std::shared_ptr<mmap_context> m_mmap_context;
