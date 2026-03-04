@@ -524,12 +524,12 @@ void select_support_mcl<t_b,t_pat_len>::load(std::istream& in, const bit_vector*
                 if (file_size < 9 or offset > file_size - 9) {
                     throw std::runtime_error("trying reading beyond the mmap'ed file");
                 }
-                if (*reinterpret_cast<uint64_t*>(m_mmap_context->data() + offset)
-                        != miniblock_size(i) * static_cast<uint64_t>(m_block_width[i]))
-                    throw std::runtime_error("select_support_mcl: block size mismatch in mmap'd file");
                 m_block_width[i] = m_mmap_context->data()[offset + 8];
                 if (m_block_width[i] == 0 or m_block_width[i] > 64)
                     throw std::runtime_error("select_support_mcl: invalid block width in mmap'd file");
+                if (*reinterpret_cast<uint64_t*>(m_mmap_context->data() + offset)
+                        != miniblock_size(i) * static_cast<uint64_t>(m_block_width[i]))
+                    throw std::runtime_error("select_support_mcl: block size mismatch in mmap'd file");
                 m_block_offset[i] = offset + 9;
                 const size_type bytes = 9 + (((miniblock_size(i)
                                                * static_cast<size_type>(m_block_width[i]) + 63) >> 6) << 3);
