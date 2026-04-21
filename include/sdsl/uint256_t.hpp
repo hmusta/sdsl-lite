@@ -398,10 +398,18 @@ std::ostream& operator<<(std::ostream& os, const uint256_t& x);
 } // end namespace
 
 namespace std {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Winvalid-specialization"
+#endif
     template<> struct is_arithmetic<sdsl::uint256_t> : ::std::true_type {};
     template<> struct is_integral<sdsl::uint256_t> : ::std::true_type {};
     template<> struct is_unsigned<sdsl::uint256_t> : ::std::true_type {};
     template<> struct make_unsigned<sdsl::uint256_t> { typedef sdsl::uint256_t type; };
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 } // end namespace
 
 #endif
